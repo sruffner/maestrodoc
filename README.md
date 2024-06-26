@@ -19,7 +19,7 @@ The `maestrodoc()` function is implemented by a Matlab script, `maestrodoc.m,` a
 The `JMXDoc` class file and a small JavaScript Object Notation (JSON) library,`org.json`, are archived together in
 `hhmi-ms-maestro.jar`, which must be added to Matlab's Java class path for `maestrodoc()` to work. An Ant build file, 
 `release.xml`, prepares this JAR file and packages it in a ZIP file with `maestrodoc.m` and a sample script, 
-`exampledoc.m,` that demonstrates how to use `maestrodoc()` to generate a **Maestro** JMX experiment document. This
+`examplemdoc.m,` that demonstrates how to use `maestrodoc()` to generate a **Maestro** JMX experiment document. This
 ZIP file is available for [download from the **Maestro** user's 
 guide](https://sites.google.com/a/srscicomp.com/maestro/downloads).
 
