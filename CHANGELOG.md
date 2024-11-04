@@ -4,6 +4,10 @@ This file contains a version history describing changes to maestrodoc() and its 
 first introduced in May 2010. Maestro version 2.6.0 and later are capable of importing the JSON document constructed
 with the help of maestrodoc().
 
+## v1.2.1 (Nov 2024)
+- Added the `selectDur` option for the trial parameter `specialop`, corresponding to the new special feature 
+"selDurByFix" which was added in Maestro 5.0.1. See Maestro online user guide for more information.
+
 ## v1.2.0 (Jun 2024)
 Rebuilt after migrating code to IntelliJ IDEA and compiling against JDK11. _**No functional changes.**_
 

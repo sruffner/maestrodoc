@@ -363,7 +363,7 @@ function maestrodoc(op, arg)
 %       'failsafeseg': If trial cut short because subject broke fixation, data is still saved trial reached the start of
 %          this segment. Integer in [0..#segs], where 0 => trial must finish. Default = 0.
 %       'specialop': Special feature. Recognized values: 'none', 'skip', 'selbyfix', 'selbyfix2', 'switchfix', 
-%          'rpdistro', 'choosefix1', 'choosefix2', 'search'. See Maestro User's Guide for a full description. 
+%          'rpdistro', 'choosefix1', 'choosefix2', 'search', 'selectDur'. See Maestro User's Guide for a full description.
 %          Default = 'none'. 
 %       'specialseg': Index of segment during which special feature operation occurs. Ignored if 'specialop'=='none'.
 %          Integer in [1..#segs]. Default = 1.
@@ -507,8 +507,11 @@ function maestrodoc(op, arg)
 % duplicate tags, or overlapping/invalid sections; (9) TRIAL.SEGS contains an invalid parameter name or value; or (10)
 % the length of TRIAL.SEGS(segIdx).TRAJ does not equal the length of TRIAL.TGTS. BE CAREFUL!!!
 %
+% NOTE: Maestrodoc() supports defining XYScope targets and trials that use those targets. However, Maestro has not
+% supported the XYScope display platform since V4.0 and dropped it entirely in V5.0. Maestro 5.0 and later will simply
+% ignore any XYScope-related content in a JMX document.
 %
-% [Version 1.1.1, May 2019; for Maestro v4.1.0]
+% [Version 1.2.1, Nov 2024; for Maestro v5.0.1 or earlier.]
 %
 % Scott Ruffner
 % sruffner@srscicomp.com

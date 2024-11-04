@@ -2032,6 +2032,8 @@ public class JMXDoc
     *  "image" target added in Maestro 3.3.1.</li>
     *  <li>4 : Added VStab sliding-average window length to settings.other. This became a persisted application setting
     *  in Maestro 4.1.1.</li>
+    *  <li>4 : Added support for new special op "selectDur", for "selDurByBix" added in Maestro 5.0.1. No change in
+    *  structure of JMX doc, so no need for version change.</li>
     * </ul>
     */
    private final static int CURRVERSION = 4;
@@ -2122,7 +2124,7 @@ public class JMXDoc
       
       SPECIALOPS = new HashMap<>();
       names = new String[] {"none", "skip", "selbyfix", "selbyfix2", "switchfix", "rpdistro", "choosefix1", 
-            "choosefix2", "search"};
+            "choosefix2", "search", "selectDur"};
       for(String s : names) SPECIALOPS.put(s, null);
 
       PSGM_MODES = new HashMap<>();

@@ -11,7 +11,7 @@
 		<property name="build.dir" value="out${FS}production${FS}maestrodoc"/>
 		<property name="support.dir" value="supporting"/>
 		<property name="archive.dir" value="releases"/>
-		<property name="md.version" value="120"/>
+		<property name="md.version" value="121"/>
 		<property name="rel.dir" value="${archive.dir}${FS}v${md.version}"/>
 		<mkdir dir="${rel.dir}"/>
 	</target> 
@@ -28,7 +28,7 @@
 	
 	<!-- This target creates the supporting JAR file hhmi-ms-maestro.jar for the Matlab function MAESTRODOC(), then
 	     puts the JAR file, maestrodoc.m, and exampledoc.m in a ZIP file tagged with the version: maestrodoc_nnn.zip.
-	     Bothe the JAR and the ZIP are stored in the current release folder. -->
+	     Both the JAR and the ZIP are stored in the current release folder. -->
 	<target name="ms" depends="init">
 		<delete failonerror="false">
 			<fileset dir="${rel.dir}" includes="hhmi-ms-maestro.jar, maestrodoc_${md.version}.zip"/>
