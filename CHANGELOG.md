@@ -4,6 +4,12 @@ This file contains a version history describing changes to maestrodoc() and its 
 first introduced in May 2010. Maestro version 2.6.0 and later are capable of importing the JSON document constructed
 with the help of maestrodoc().
 
+## v1.2.2 (Nov 2024)
+- Added support for defining and using random variables in trials.
+- Removed support for specifying XYScope display settings, XYScope targets, and XYScope-related trial features.
+- Updated `examplemdoc.m` -- removing all XYScope-related definitions and adding a few trials to test the use of random
+variables and the new "selDurByFix" special feature.
+
 ## v1.2.1 (Nov 2024)
 - Added the `selectDur` option for the trial parameter `specialop`, corresponding to the new special feature 
 "selDurByFix" which was added in Maestro 5.0.1. See Maestro online user guide for more information.

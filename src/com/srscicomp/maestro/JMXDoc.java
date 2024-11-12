@@ -51,12 +51,6 @@ import org.json.JSONUtilities;
  * </p>
  * <p>The <i>settings</i> field. A JSON object holding all Maestro application settings, as follows:</p>
  * <ul>
- *    <li><i>settings.xy</i> : XYScope display properties. This is a 7-element JSON array of integers <i>[w h d del dur 
- *    fix seed]</i>, where: <i>w</i> is the width of the visible display in mm; <i>h</i> is its height in mm; <i>d</i>
- *    is the perpendicular distance in mm from the eye to screen center; <i>del</i> and <i>dur</i> are the dot draw
- *    cycle delay and ON duration in #dotter-board ticks; <i>fix</i> is a flag that selects between auto-generating a
- *    different seed for the XYScope's RNG for each trial (<i>fix == 0</i>) or using the same "fixed" seed; and 
- *    <i>seed</i> is the fixed seed value.</li>
  *    <li><i>settings.rmv</i> : RMVideo display properties. This is a 6-element JSON array of integers <i>[w h d b 
  *    s p]</i>, where: <i>w,h,d</i> are as described above and <i>b</i> is a packed RGB integer specifying the display's
  *    uniform background color, <i>s</i> is the spot size in mm and <i>p</i> is the flash duration in #frames for the
@@ -90,13 +84,12 @@ import org.json.JSONUtilities;
  *    <li><i>name</i> : The target set's name. Must be a valid <i>Maestro</i> object name, and no two target sets can
  *    have the same name. Cannot be "Predefined", which is reserved in <i>Maestro</i> 2.x. While it no longer exists in
  *    Maestro 3, we still disallow it to maintain backwards-compatibility with version 2.x.</li>
- *    <li><i>targets</i> : A JSON array of JSON objects, each of which is the definition of a target in this set. Each
- *    JSON target object has four fields:</li>
+ *    <li><i>targets</i> : A JSON array of JSON objects, each of which is the definition of an RMVideo target in this
+ *    set. Each JSON target object has 3 fields:</li>
  *    <ul>
  *       <li><i>name</i> : The target name. Must be a valid <i>Maestro</i> object name, and no two targets in the parent
  *       set can have the same name.</li>
- *       <li><i>isxy</i> : Display hardware. An integer. Nonzero = XYScope target; zero = RMVideo target.</li>
- *       <li><i>type</i> : Target type, a string.</li>
+ *       <li><i>type</i> : RMVideo target type, a string.</li>
  *       <li><i>params</i> : Target parameters. A (possibly empty) JSON array containing a sequence of <i>param-name,
  *       param-value</i> pairs, where <i>param-name</i> is a string and the data type of <i>param-value</i> depends on
  *       the specific parameter. Parameters which do not apply to the specified target type need not be included in the 
@@ -193,7 +186,10 @@ import org.json.JSONUtilities;
  *    </p>
  *    </li>
  * </ul>
- * 
+ *
+ * [08nov2024] maestrodoc() v1.2.2 dropped support for the XYScope platform, which has not been supported by Maestro
+ * since V4.0 (Nov 2018). {@link #changeSettings}, {@link #addTarget}, and {@link #addTrial} updated accordingly.
+ *
  * @author sruffner
  */
 @SuppressWarnings("unused")
@@ -376,7 +372,6 @@ public class JMXDoc
       {
          // initialize all Maestro application settings to their default values
          settings = new JSONObject();
-         settings.put("xy", new JSONArray(SETTINGS_XY_DEFAULTS));
          settings.put("rmv", new JSONArray(SETTINGS_RMV_DEFAULTS));
          settings.put("fix", new JSONArray(SETTINGS_FIX_DEFAULTS));
          settings.put("other", new JSONArray(SETTINGS_OTHER_DEFAULTS));
@@ -391,14 +386,13 @@ public class JMXDoc
    
    /**
     * Change the application settings in this JMX document.
-    * @param xyparams XYScope display properties <i>[w h d del dur fix seed]</i>.
     * @param rmvparams RMVideo display properties <i>[w h d b sz dur]</i>.
     * @param fixacc Cont-mode horizontal and vertical fixation accuracy <i>[h v]</i> in deg.
     * @param other  Other properties <i>[d p1 p2 ovride varatio audiorew beep vstabwin]</i>.
     * @return On failure, the settings are left unchanged and a descriptive error message is returned; if successful, an
     * empty string is returned.
     */
-   public String changeSettings(int[] xyparams, int[] rmvparams, double[] fixacc, int[] other)
+   public String changeSettings(int[] rmvparams, double[] fixacc, int[] other)
    {
       JSONObject old = settings;
       String errMsg = "";
@@ -406,11 +400,7 @@ public class JMXDoc
       {
          settings = new JSONObject();
          
-         JSONArray ar = new JSONArray(); 
-         if(xyparams != null) for(int xyparam : xyparams) ar.put(xyparam);
-         settings.put("xy", ar);
-         
-         ar = new JSONArray(); 
+         JSONArray ar = new JSONArray();
          if(rmvparams != null) for(int rmvparam : rmvparams) ar.put(rmvparam);
          settings.put("rmv", ar);
                   
@@ -439,15 +429,6 @@ public class JMXDoc
     */
    private void checkSettings() throws JSONException
    {
-      // XYScope settings
-      JSONArray xy = settings.getJSONArray("xy");
-      if(xy.length() != 7) throw new JSONException("Incorrect number of elements in settings.xy");
-      for(int i=0; i<3; i++) if(xy.getInt(i) < 50 || xy.getInt(i) > 50000)
-         throw new JSONException("Bad XYScope display geometry in settings.xy");
-      if(xy.getInt(3) < 1 || xy.getInt(3) > 15 || xy.getInt(4) < 1 || xy.getInt(4) > 254 || 
-            (xy.getInt(3) + xy.getInt(4) > 255))
-         throw new JSONException("Bad XYScope dot draw cycle timing in settings.xy");
-      
       // RMVideo settings
       JSONArray rmv = settings.getJSONArray("rmv");
       if(rmv.length() != 6) throw new JSONException("Incorrect number of elements in settings.rmv");
@@ -821,8 +802,7 @@ public class JMXDoc
             
             try
             {
-               if(target.getInt("isxy") != 0) checkXYScopeTarget(target);
-               else checkRMVideoTarget(target);
+               checkRMVideoTarget(target);
             }
             catch(JSONException jse) 
             { 
@@ -833,19 +813,19 @@ public class JMXDoc
    }
 
    /**
-    * Append a new target to the specified target set in this JMX document, or replace an existing target in that set.
+    * Append a new RMVideo target to the specified target set in this JMX document, or replace an existing target in
+    * that set.
     * @param set Name of destination target set. Must exist in document.
     * @param name Name of the target. If another target with this name already exists in the set, its definition is 
     * replaced by the one provided.
-    * @param isXY True for an XYScope target, false for an RMVideo target.
-    * @param type The target type. Must be one of the recognized XYScope or RMVideo target types.
+    * @param type The RMVideo target type.
     * @param params A (possibly empty) JSON array containing a sequence of ('param-name', param-value) pairs that 
     * complete the target definition. If a relevant parameter is omitted from this array, it is assumed to be set to a
     * default value.
     * @return An empty string if operation is successful; else, a brief message describing why the operation failed. On
     * failure, the JMX document is left unchanged.
     */
-   public String addTarget(String set, String name, boolean isXY, String type, JSONArray params)
+   public String addTarget(String set, String name, String type, JSONArray params)
    {
       // find the target set named
       JSONObject tgSet = null;
@@ -875,12 +855,10 @@ public class JMXDoc
       {
          tgt = new JSONObject();
          tgt.put("name", name);
-         tgt.put("isxy", isXY ? 1 : 0);
          tgt.put("type", type);
          tgt.put("params", params);
          
-         if(isXY) checkXYScopeTarget(tgt);
-         else checkRMVideoTarget(tgt);
+         checkRMVideoTarget(tgt);
          
          JSONArray targets = tgSet.getJSONArray("targets");
          boolean found = false;
@@ -905,139 +883,11 @@ public class JMXDoc
    }
    
    /**
-    * Helper method validates a JSON object encapsulating an XYScope target definition, as it would be stored in a
-    * JMX document. 
-    * @param target A target definition object, as more fully described in the class header. This method only validates
-    * the <i>type</i> and <i>params</i> fields of the target object. It is assumed that the caller has already validated
-    * the <i>name</i> and <i>isxy</i> fields
-    * @throws JSONException if the object is not consistent with the definition of an XYScope target, or if there are
-    * any invalid parameter names or values in its <i>params</i> field. The exception message gives a rough idea of 
-    * where the problem lies, for debugging purposes.
-    */
-   private void checkXYScopeTarget(JSONObject target) throws JSONException
-   {
-      String type = target.getString("type");
-      if(!XYTYPES.containsKey(type))
-         throw new JSONException("Invalid target type: " + type);
-      
-      JSONArray params = target.getJSONArray("params");
-      if(params.length() % 2 != 0) throw new JSONException("Params array must have an even number of elements!");
-      
-      // validate parameters
-      for(int i=0; i<params.length(); i+=2)
-      {
-         String pname = params.getString(i);
-         switch(pname)
-         {
-         case "ndots":
-            int ndots = params.getInt(i + 1);
-            if(ndots < 0) throw new JSONException("Illegal value for 'ndots': " + ndots);
-            break;
-         case "dim":
-         {
-            JSONArray ar = params.getJSONArray(i + 1);
-            int len = type.equals("bar") ? 3 : (type.equals("rectannu") ? 6 : 2);
-            if(ar.length() != len) throw new JSONException("Invalid array length for 'dim' parameter: " + ar.length());
-
-            switch(type)
-            {
-            case "bar":
-            {
-               double w = ar.getDouble(0);
-               double h = ar.getDouble(1);
-               double daxis = ar.getDouble(2);
-
-               if(w < 0) throw new JSONException("Invalid bar width in 'dim' parameter: " + w);
-               if(h < 0.01) throw new JSONException("Invalid bar height in 'dim' parameter: " + h);
-               if(daxis < 0 || daxis > 359.99) throw new JSONException("Invalid drift axis angle for bar: " + daxis);
-               break;
-            }
-            case "flowfield":
-               double or = ar.getDouble(0);
-               double ir = ar.getDouble(1);
-               if(or < 0.5 || or > 44.99 || ir < 0.5 || ir > 44.99 || (or < ir + 2.0))
-                  throw new JSONException("Invalid flowfield radii in 'dim' parameter: " + or + "," + ir);
-               break;
-            case "rectannu":
-            {
-               double w = ar.getDouble(0);
-               double h = ar.getDouble(1);
-               double iw = ar.getDouble(2);
-               double ih = ar.getDouble(3);
-               double ix = ar.getDouble(4);
-               double iy = ar.getDouble(5);
-
-               if(w < 0.01) throw new JSONException("Invalid target width in 'dim' parameter: " + w);
-               if(h < 0.01) throw new JSONException("Invalid target height in 'dim' parameter: " + h);
-               if(iw < 0.01 || iw > w) throw new JSONException("Invalid target hole width in 'dim' parameter: " + iw);
-               if(ih < 0.01 || ih > h) throw new JSONException("Invalid target hole height in 'dim' parameter: " + ih);
-               if((ix + iw / 2.0 > w / 2.0) || (ix - iw / 2.0 < -w / 2.0) || (iy + ih / 2.0 > h / 2.0) || (iy - ih / 2.0 < -h / 2.0))
-                  throw new JSONException("Invalid target hole location (x,y) in 'dim' parameter: " + ix + "," + iy);
-               break;
-            }
-            default:
-            {
-               double w = ar.getDouble(0);
-               double h = ar.getDouble(1);
-               if(w < 0.01) throw new JSONException("Invalid target width in 'dim' parameter: " + w);
-               if(type.equals("rectdot"))
-               {
-                  if(h < 0) throw new JSONException("Invalid dot spacing in 'dim' parameter: " + h);
-               } else if(h < 0.01) throw new JSONException("Invalid target height in 'dim' parameter: " + h);
-               break;
-            }
-            }
-            break;
-         }
-         case "pct":
-            int pct = params.getInt(i + 1);
-            if(pct < 0 || pct > 100) throw new JSONException("Illegal value for 'pct': " + pct);
-            break;
-         case "dotlf":
-         {
-            JSONArray ar = params.getJSONArray(i + 1);
-            if(ar.length() != 2) throw new JSONException("Invalid array length for 'dotlf' parameter: " + ar.length());
-            boolean lifeinms = (ar.getInt(0) != 0);
-            if(lifeinms)
-            {
-               int maxlife = ar.getInt(1);
-               if(maxlife < 2 || maxlife > 32767) throw new JSONException("Invalid max dot life: " + maxlife);
-            } else
-            {
-               double maxlife = ar.getDouble(1);
-               if(maxlife < 0.01 || maxlife > 327.67) throw new JSONException("Invalid max dot life: " + maxlife);
-            }
-            break;
-         }
-         case "noise":
-         {
-            JSONArray ar = params.getJSONArray(i + 1);
-            if((type.equals("noisydir") && ar.length() != 2) || (type.equals("noisyspeed") && ar.length() != 3))
-               throw new JSONException("Invalid array length for 'noise' parameter: " + ar.length());
-
-            int rng = ar.getInt(0);
-            int intv = ar.getInt(1);
-            boolean mult = false;
-            if(type.equals("noisyspeed")) mult = (ar.getInt(2) != 0);
-            int minRng = mult ? 1 : 0;
-            int maxRng = type.equals("noisydir") ? 180 : (mult ? 7 : 300);
-
-            if(rng < minRng || rng > maxRng) throw new JSONException("Invalid noise range: " + rng);
-            if(intv < 2 || intv > 1024) throw new JSONException("Invalid noise update interval: " + intv);
-            break;
-         }
-         default:
-            throw new JSONException("Unrecognized parameter name: " + pname);
-         }
-      }
-   }
-   
-   /**
     * Helper method validates a JSON object encapsulating an RMVideo target definition, as it would be stored in a
     * JMX document. 
     * @param target A target definition object, as more fully described in the class header. This method only validates
     * the <i>type</i> and <i>params</i> fields of the target object. It is assumed that the caller has already validated
-    * the <i>name</i> and <i>isxy</i> fields
+    * the <i>name</i> field.
     * @throws JSONException if the object is not consistent with the definition of an RMVideo target, or if there are
     * any invalid parameter names or values in its <i>params</i> field. The exception message gives a rough idea of 
     * where the problem lies, for debugging purposes.
@@ -1505,13 +1355,6 @@ public class JMXDoc
                }
                break;
             }
-            case "xydotseedalt":
-               ok = (params.getInt(i + 1) >= -1);
-               break;
-            case "xyinterleave":
-               int n = params.getInt(i + 1);
-               ok = (0 <= n) && (n <= nTgts);
-               break;
             case "rewpulses":
             {
                JSONArray ar = params.getJSONArray(i + 1);
@@ -1544,7 +1387,10 @@ public class JMXDoc
                break;
             }
             default:
-               throw new JSONException("Unrecognized general trial param: " + pname);
+               // obsolete XYScope-related trial params are simply ignored
+               ok = ("xydotseedalt".equals(pname) || "xyinterleave".equals(pname));
+               if(!ok)
+                  throw new JSONException("Unrecognized general trial param: " + pname);
             }
             
             if(!ok)
@@ -1645,8 +1491,8 @@ public class JMXDoc
             if(tgtsInUse.containsKey(s))
                throw new JSONException("Duplicate entry in trial target list: " + s);
             tgtsInUse.put(s, null);
-            
-            if(PREDEFTGT_NAMES.containsKey(s)) continue;
+
+            if("CHAIR".equals(s)) continue;  // the only remaining supported Maestro 2-era "predefined" target
             
             boolean found = false;
             int slash = s.indexOf('/');
@@ -1720,7 +1566,99 @@ public class JMXDoc
                segIndices.add(end);
             }
          }
-         
+
+         // validate the list of random variables -- if present (field is optional)
+         what = "rvs";
+         int numRVs = 0;
+         if(trial.has("rvs"))
+         {
+            JSONArray rvs = trial.getJSONArray("rvs");
+            numRVs = rvs.length();
+            if(numRVs > 10)
+               throw new JSONException("A maximum of 10 RVs may defined in any given trial!");
+            for(int i=0; i<numRVs; i++)
+            {
+               what = "RV " + (i+1);   // 1-based index
+
+               JSONArray rv = rvs.getJSONArray(i);
+               String rvType = rv.getString(0);
+               switch(rvType)
+               {
+               case "uniform":
+                  // uniform(seed, A, B): seed >= 0; A < B
+                  if((rv.getInt(1) < 0) || (rv.getDouble(2) >= rv.getDouble(3)))
+                     throw new JSONException("Invalid parameter(s) for a 'uniform' random variable");
+                  break;
+               case "normal":
+                  // normal(seed, M, D, S): seed >= 0, D > 0, S >= 3*D
+                  if((rv.getInt(1) < 0) || (rv.getDouble(3) <= 0) ||
+                        (rv.getDouble(4) < 3*rv.getDouble(3)))
+                     throw new JSONException("Invalid parameter(s) for a 'normal' random variable");
+                  break;
+               case "exponential":
+                  // exponential(seed, L, S): seed >= 0, L > 0, S >= 3/L
+                  if((rv.getInt(1) < 0) || (rv.getDouble(2) <= 0) ||
+                        (rv.getDouble(3) < 3/rv.getDouble(2)))
+                     throw new JSONException("Invalid parameter(s) for an 'exponential' random variable");
+                  break;
+               case "gamma":
+                  // gamma(seed, K, T, S): seed >= 0, K>0, T>0, S >= T*(K + 3*sqrt(K))
+                  double paramK = rv.getDouble(2), paramT = rv.getDouble(3);
+                  if((rv.getInt(1) < 0) || (paramK <= 0) || (paramT <= 0) ||
+                        (rv.getDouble(4 ) <  paramT*(paramK + 3*Math.sqrt(paramK))))
+                     throw new JSONException("Invalid parameter(s) for a 'gamma' random variable");
+                  break;
+               case "function":
+                  // function RV defined by a string formula. We only verify that it does not depend on its own
+                  // value, and only contains references 'xN' to RVs defined in this list. The RV indices are 0-based
+                  // in the formula string!
+                  String formula = rv.getString(1);
+                  String xRV = "x" + i;
+                  if(formula.contains(xRV))
+                     throw new JSONException("A 'function' random variable cannot depend on its own value!");
+                  for(int j=0; j<10 && i!=j; j++)
+                  {
+                     xRV = "x" + j;
+                     if(formula.contains(xRV) && (j >= numRVs))
+                        throw new JSONException("A 'function' random variable depends on an undefined RV!");
+                  }
+                  break;
+               default:
+                  throw new JSONException("Invalid random variable type!");
+               }
+            }
+         }
+
+         // validate RV assignments to segment table parameters, if any (field is optional). Ignore the field if no
+         // RVs were defined (rather than failing)
+         what = "rvuse";
+         if((numRVs > 0) && trial.has("rvuse") && (trial.getJSONArray("rvuse").length() > 0))
+         {
+            JSONArray rvAssigns = trial.getJSONArray("rvuse");
+            for(int i=0; i<rvAssigns.length(); i++)
+            {
+               JSONArray assign = rvAssigns.getJSONArray(i);
+               if(assign.length() != 4)
+                  throw new JSONException(i + "-th RV assignment is invalid.");
+
+               int rvIdx = assign.getInt(0);
+               String paramName = assign.getString(1);
+               int segIdx = assign.getInt(2);
+               int tgtIdx = assign.getInt(3);
+
+               // all indices are 1-based in keeping with Matlab convention
+               if((rvIdx <= 0) || (rvIdx > numRVs))
+                  throw new JSONException((i+1) + "-th RV assignment invalid: Bad RV index.");
+               if(!RVASSIGNABLE_PARAMS.containsKey(paramName))
+                  throw new JSONException((i+1) + "-th RV assignment invalid: Bad param name.");
+               if((segIdx <= 0) || (segIdx > nSegs))
+                  throw new JSONException((i+1) + "-th RV assignment invalid: Bad segment index.");
+               if((!("mindur".equals(paramName) || "maxdur".equals(paramName))) &&
+                     ((tgtIdx <= 0) || (tgtIdx > nTgts)))
+                  throw new JSONException((i+1) + "-th RV assignment invalid: Bad target trajectory index.");
+            }
+         }
+
          // validate the segment table
          what = "segs";
          JSONArray segments = trial.getJSONArray("segs");
@@ -1750,10 +1688,6 @@ public class JMXDoc
                      ok = (0 <= min) && (min <= max);
                   }
                   break;
-               case "xyframe":
-                  int dt = hdr.getInt(j + 1);
-                  ok = (dt % 2 == 0) && (2 <= dt) && (dt <= 256);
-                  break;
                case "fix1":
                case "fix2":
                   int iTgt = hdr.getInt(j + 1);
@@ -1777,7 +1711,9 @@ public class JMXDoc
                   ok = (0 <= marker) && (marker <= 10);
                   break;
                default:
-                  throw new JSONException("Unrecognized header parameter name for segment " + (i + 1) + ": " + pname);
+                  // obsolete param 'xyframe' is simply ignored if present
+                  if(!"xyframe".equals(pname))
+                     throw new JSONException("Unrecognized header parameter for segment " + (i + 1) + ": " + pname);
                }
             }
             if(!ok) throw new JSONException("Bad header for segment " + (i+1));
@@ -2068,7 +2004,6 @@ public class JMXDoc
    private final static HashMap<String, String> ALT_CHANNEL_NAMES;
    private final static HashMap<String, Object> CHANNEL_COLORS;
    private final static HashMap<String, Object> PERT_TYPES;
-   private final static HashMap<String, Object> XYTYPES;
    private final static HashMap<String, Object> RMVTYPES;
    private final static HashMap<String, Object> RMVAPERTURES;
    // maps the aperture names that appear in the Maestro GUI to the actual aperture shape names MAESTRODOC uses.
@@ -2077,7 +2012,7 @@ public class JMXDoc
    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
    private final static HashMap<String, Object> PSGM_MODES;
    private final static HashMap<String, Object> PERT_TRAJCMPTS;
-   private final static HashMap<String, Object> PREDEFTGT_NAMES;
+   private final static HashMap<String, Object> RVASSIGNABLE_PARAMS;
    static
    {
       CHANNEL_NAMES = new HashMap<>();
@@ -2100,11 +2035,6 @@ public class JMXDoc
       PERT_TYPES.put("pulse train", null);
       PERT_TYPES.put("uniform noise", null);
       PERT_TYPES.put("gaussian noise", null);
-      
-      XYTYPES = new HashMap<>();
-      names = new String[] {"rectdot", "center", "surround", "optcenter", "rectannu", "flowfield", "bar", "oc_coherent", 
-            "oc_dotlife", "noisydir", "noisyspeed"};
-      for(String s : names) XYTYPES.put(s, null);
 
       RMVTYPES = new HashMap<>();
       names = new String[] {"point", "dotpatch", "flowfield", "bar", "spot", "grating", "plaid", "movie", "image"};
@@ -2134,10 +2064,11 @@ public class JMXDoc
       PERT_TRAJCMPTS = new HashMap<>();
       names = new String[] {"winH", "winV", "patH", "patV", "winDir", "patDir", "winSpd", "patSpd", "speed", "direc"};
       for(String s : names) PERT_TRAJCMPTS.put(s, null);
-      
-      PREDEFTGT_NAMES = new HashMap<>();
-      names = new String[] {"CHAIR", "FIBER1", "FIBER2", "REDLED1", "REDLED2"};
-      for(String s : names) PREDEFTGT_NAMES.put(s, null);
+
+      RVASSIGNABLE_PARAMS = new HashMap<>();
+      names = new String[] {"mindur", "maxdur", "hpos", "vpos", "hvel", "vvel", "hacc", "vacc",
+            "hpatvel", "vpatvel", "hpatacc", "vpatacc"};
+      for(String s : names) RVASSIGNABLE_PARAMS.put(s, null);
    }
    
    

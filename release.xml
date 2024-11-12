@@ -11,7 +11,7 @@
 		<property name="build.dir" value="out${FS}production${FS}maestrodoc"/>
 		<property name="support.dir" value="supporting"/>
 		<property name="archive.dir" value="releases"/>
-		<property name="md.version" value="121"/>
+		<property name="md.version" value="122"/>
 		<property name="rel.dir" value="${archive.dir}${FS}v${md.version}"/>
 		<mkdir dir="${rel.dir}"/>
 	</target> 

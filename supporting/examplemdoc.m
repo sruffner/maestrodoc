@@ -4,7 +4,6 @@ function examplemdoc(f)
 % the document to the file path specified in the Matlab string argument F. It serves as an example which users can copy 
 % and modify for their own purposes. It can also be used to test MAESTRODOC() functionality.
 %
-% 
 % Scott Ruffner
 % sruffner@srscicomp.com
 %
@@ -16,11 +15,9 @@ assert( (nargin == 1) && ischar(f) && isvector(f) && (~isempty(f)), 'examplemdoc
 maestrodoc('open', '');
 
 % application settings =================================================================================================
-% settings.xy = [width height depth delay dur fix? seed]
 % settings.rmv = [width height depth bkgRGB syncSpotSz, syncFlashDur]
 % settings.fix = [hAccuracy vAccuracy]
 % settings.other = [fixDur rew1 rew2 ovride? varatio audiorew beep? vstabwin]
-settings.xy = [400 300 600 10 1 0 12345];
 settings.rmv = [390 290 450 hex2dec('00808080') 15 6];
 settings.fix = [2.5 2.5];
 settings.other = [2500 10 10 0 1 0 0 10];
@@ -50,13 +47,12 @@ maestrodoc('pert', {'gauss_5ms_1.0' 'gaussian noise' 5000 5 1.0 6789});
 % also include an RMVideo dot-patch target in two-color contrast mode ==================================================
 maestrodoc('tgset', 'RMVDotPatches');
 target.set = 'RMVDotPatches';
-target.isxy = 0;
 target.type = 'dotpatch';
 for sz=2:2:20
   target.name = sprintf('rectpatch_%d', sz);
   target.params = {'ndots' 2*sz*sz 'dotsize' 2 'dim' [sz sz]};   % rely on defaults for all other parameters!!
   maestrodoc('target', target);
-end;
+end
 
 target.type = 'spot';
 target.name = 'fixPt';
@@ -71,7 +67,6 @@ maestrodoc('target', target);
 % define RMVideo grating targets with 5 different spatial frequences and 5 different contrasts =========================
 maestrodoc('tgset', 'RMVGratings');
 target.set = 'RMVGratings';
-target.isxy = 0;
 target.type = 'grating';
 for freq=[0.2 0.5 1.0 1.5 2.0]
    for con=[10 25 50 75 100]
@@ -79,8 +74,8 @@ for freq=[0.2 0.5 1.0 1.5 2.0]
       gratSpec = [hex2dec('00808080') (con*(2^16) + con*(2^8) + con) freq 0 0];
       target.params = {'aperture' 'oval' 'dim' [20 20] 'sigma' [3 3] 'oriadj' 1 'grat1' gratSpec};
       maestrodoc('target', target);
-   end;
-end;
+   end
+end
 
 % define trial set "assessRF" that presents dot-patch targets of 4 different sizes (2, 4, 8, 16 deg) at 25 different 
 % locations. During each "test condition" (size, location), the dots pan left, right, up, and down for 100ms at a fixed
@@ -116,9 +111,9 @@ for sz = tgtSizes
          condition(i).sz = sz;
          condition(i).tag = sprintf('%d_at_(%d,%d)', sz, x, y);
          i = i+1;
-      end;
-   end;
-end;
+      end
+   end
+end
 
 % random permutation of the integers 1:100 -- so we present a random sequence of the 100 test conditions across the
 % 25 trials we will create (4 conditions per trial)
@@ -175,112 +170,108 @@ for i=1:25
       seg.traj{tgtIndex} = {'on' 1 'patvel' [10 270] 'vstab' 'v'};
       trial.segs(segIdx) = seg;
       segIdx = segIdx + 1;
-   end;
+   end
    
    maestrodoc('trial', trial);
-end;
+end
 
-% define XYScope 'opt center' targets of various sizes with density 2 dots per sq deg, plus a fixation spot ============
-maestrodoc('tgset', 'XYDotPatches');
-target.set = 'XYDotPatches';
-target.isxy = 1;
-target.type = 'optcenter';
-for sz=2:2:20
-  target.name = sprintf('xypatch_%d', sz);
-  target.params = {'ndots' 2*sz*sz 'dim' [sz sz]};
-  maestrodoc('target', target);
-end;
+% a target set with 3 uniform spot targets =============================================================================
+maestrodoc('tgset', 'RMVSpots');
+target.set = 'RMVSpots';
+target.type = 'spot';
 
-target.type = 'rectdot';
-target.name = 'fix';
-target.params = {'ndots' 5 'dim' [1 0]};
+target.name = 'whiteDot';
+target.params = {'dim' [0.05 0.05]};
 maestrodoc('target', target);
 
-% define a single trial set 'xytuning' comprised of 4 subsets of trials assessing direction and speed tuning over 4
-% different RF sizes. Each subset is called "dirAndSpeedTune_szDeg", where "sz" is one of [4 8 16 20]. 32 test 
-% conditions (4 speeds x 8 directions) are repeated 8 times each over the course of a single block of 32 trials (eight 
-% conditions presented per trial). Each test condition pans a single segment. Between each test segment is a pause 
-% segment during which the target remains on but does not move. The trials uses the "xypatch_sz" targets; the target 
-% window does not move, only the target dot pattern. Throughout the trial a fixation target remains on at (-15, 0). The 
-% test target is displayed at (0,0). Each trial begins with a random-duration segment during which fixation is
-% established. Fixation must be maintained during the remainder of the trial. Each test condition is marked by a tagged 
-% section that spans the test segment and the following pause. There are a total of 8*2 + 1 = 17 segments per trial.
-maestrodoc('trset', 'xytuning');
-trSubset.set = 'xytuning';
-trSubset.name = '';
-for sz=[4 8 16 20]
-   trSubset.name = sprintf('dirAndSpeedTune_%dDeg', sz);
-   maestrodoc('trsub', trSubset);
+target.name = 'greenCircle';
+target.params = {'dim' [0.25 0.25] 'rgb' (0x0000ff00) 'aperture' 'oval'};
+maestrodoc('target', target);
 
-   % set trial info that is the same for all of the trials in this trial subset
-   trial.set = trSubset.set;
-   trial.subset = trSubset.name;
-   trial.params = {'chancfg' 'myChannels' 'startseg' 2};
-   trial.psgm = [];
-   trial.perts = {};
-   trial.tgts = {'XYDotPatches/fix' sprintf('XYDotPatches/xypatch_%d', sz)};
-   
-   % the 32 different test conditions: 4 speeds [4 8 16 32] deg/sec x 8 directions [0:45:315] deg.  We include the tag
-   % section label for each condition, in the form 'Vd/s_Pdeg'.
-   i = 1;
-   for speed = [4 8 16 32]
-      for dir = [0:45:315]
-         condition(i).speed = speed;
-         condition(i).dir = dir;
-         condition(i).tag = sprintf('%dd/s_%ddeg', speed, dir);
-         i = i+1;
-      end;
-   end;
+target.name = 'redOval';
+target.params = {'dim' [0.25 0.5] 'rgb' (0x000000ff) 'aperture' 'oval'};
+maestrodoc('target', target);
 
-   % concatenate 8 random permutation of the integers 1:32 -- so we present a random sequence of the 32 test conditions 
-   % eight times across the 32 trials we will create (8 conditions per trial). This ensures the same condition is never
-   % presented twice in the same trial, which would cause a problem because we use tagged sections to mark the test
-   % conditions, and no two tagged sections in a trial can have the same label!
-   sequence = [randperm(32) randperm(32) randperm(32) randperm(32) randperm(32) randperm(32) randperm(32) randperm(32)];
+% the "miscellaneous" trial set contains a couple trials to test definition/usage of random variables.
+maestrodoc('trset', 'miscellaneous');
 
-   % the first segment of all trials: random-duration segment during which fixation is established. Turn on the fixation
-   % target only at (-15,0), no movement. The test target is off.
-   firstSeg.hdr = {'dur' [600 800] 'fix1' 1 'fixacc' [2.5 2.5] 'grace' 400};
-   firstSeg.traj = {{'on' 1 'abs' 1 'pos' [-15 0]} {}};
+% trial "altHV": A made-up trial that tries out RVs to control segment duration and H/V target position.
+trial.name = 'altHV';
+trial.set = 'miscellaneous';
+trial.params = {'rewpulses' [25 25]};
+trial.psgm = [];
+trial.perts = {};
+trial.tags = {};
+trial.segs = struct('hdr', {}, 'traj', {});
 
-   % common segment header for all other segments in a trial: 100ms dur, fix1 is always the first target, no grace
-   % period, and fixation window 2.5 deg square.
-   commonSegHdr = {'dur' [100 100] 'fix1' 1 'fixacc' [2.5 2.5]};
+% we will use these targets and RVs in both the "altHV" and "selDurByFix" trials
+trial.tgts = {
+   'RMVSpots/whiteDot'
+   'RMVSpots/greenCircle'
+   'RMVSpots/redOval'
+};
+trial.rvs = {
+   {'uniform', 2334, 500, 800}
+   {'uniform', 0, 200, 400}
+   {'function', 'x1 + 500'}
+   {'normal', 9999, 10.0, 2.5, 9.0}
+   {'function', '-x3'}
+};
 
-   % construct the 32 trials
-   for i=1:32
-      trial.name = sprintf('trial_%dDeg_%d', sz, i);
-      trial.segs = struct('hdr', {}, 'traj', {});
-      trial.tags = {};
-   
-      trial.segs(1) = firstSeg;
-      segIdx = 2;
-   
-      for j=1:8
-         testCond = condition(sequence((i-1)*8 + j));
-      
-         % each test consist of a "test" and a "pause" segment -- corres. tagged section spans the two segments
-         trial.tags{j} = {testCond.tag segIdx segIdx+1};
-         
-         % implement test condition: Target on. During "test" segment, test target's dot pattern drifts IAW test speed 
-         % and direction. During subsequent "pause" segment, target is on but dots do not move. Target window never 
-         % moves -- only the dot pattern. Fixation target remains on always and does not move from the position to which
-         % it was set during the first trial segment.
-         seg.hdr = commonSegHdr;
-         seg.traj = {{'on' 1} {'on' 1 'patvel' [testCond.speed testCond.dir]}};
-         trial.segs(segIdx) = seg;
-         segIdx = segIdx + 1;
-         
-         seg.traj = {{'on' 1} {'on' 1}};
-         trial.segs(segIdx) = seg;
-         segIdx = segIdx + 1;
-      end;
-   
-      maestrodoc('trial', trial);
-   end;
-   
-end;
 
+% first segment - subject must fixate on whiteDot with a grace period of 200ms. Dur will be governed by RV.
+seg.hdr = {'dur' [200 200] 'fix1' 1 'fixacc' [4.3 4.3] 'grace' 200};
+seg.traj = {{'on' 1} {} {} };
+trial.segs(1) = seg;
+% remaining segments are 500ms long, have all targets on. Subject continues to fixate on whiteSpot (no grace period).
+seg.hdr = {'dur' [500 500] 'fix1' 1 'fixacc' [4.3 4.3] 'grace' 0};
+seg.traj ={{'on' 1} {'on' 1} {'on' 1} };
+trial.segs(2) = seg;
+trial.segs(3) = seg;
+trial.segs(4) = seg;
+% use RVs to control duration of first segment and horiz or vert position of the greenCircle and redOval targets
+trial.rvuse = {
+   {1, 'mindur', 1, 0}
+   {1, 'maxdur', 1, 0}
+   {4, 'hpos', 2, 2}
+   {5, 'hpos', 2, 3}
+   {4, 'vpos', 3, 2}
+   {5, 'vpos', 3, 3}
+   {5, 'hpos', 4, 2}
+   {4, 'hpos', 4, 3}
+};
+maestrodoc('trial', trial);
+
+% trial "selDurByFix": Four segments, second is special segment, mindur of following segment controlled by a uniform
+% RV, and maxdur is set to 500ms longer using a function RV. In first segment, subject must fixate on whiteDot with
+% 200ms grace period. For remaining segments, that target is off and the green and red targets are on. Reward Pulse 2
+% 3x longer than reward pulse 1
+trial.name = 'selDurByFix';
+trial.params = {'rewpulses' [25 75] 'specialseg' 2 'specialop' 'selectDur'};
+trial.segs = struct('hdr', {}, 'traj', {});
+
+% initial fixation segment
+seg.hdr = {'dur' [500 750] 'fix1' 1 'fixacc' [5 5] 'grace' 200};
+seg.traj = {{'on' 1} {} {}};
+trial.segs(1) = seg;
+% the special segment - fix spot turned off; green and red targets turned on at (10,0) and (-10, 0). Subject must
+% choose one of the targets during this 750ms segment.
+seg.hdr = {'dur' [750 750] 'fix1' 2 'fix2' 3 'fixacc' [5 5] 'grace' 0};
+seg.traj = {{'on' 0} {'on' 1 'pos' [10 0]} {'on' 1 'pos' [-10 0]}};
+trial.segs(2) = seg;
+% the subsequent segment - targets unchanged; min/max dur will be governed by RVs
+seg.traj = {{'on' 0} {'on' 1 'pos' [0 0]} {'on' 1 'pos' [0 0]}};
+trial.segs(3) = seg;
+% last segment - targets unchanged, 300ms duration
+seg.hdr = {'dur' [300 300] 'fix1' 2 'fix2' 3 'fixacc' [5 5] 'grace' 0};
+seg.traj = {{'on' 0} {'on' 1} {'on' 1}};
+trial.segs(4) = seg;
+% min and max dur of segment following special segment is controlled by RVs
+trial.rvuse = {
+   {2, 'mindur', 3, 0}
+   {3, 'maxdur', 3, 0}
+};
+maestrodoc('trial', trial);
 
 % close the document, saving it to the file path specified =============================================================
 maestrodoc('close', f);

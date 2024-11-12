@@ -5,7 +5,7 @@ function maestrodoc(op, arg)
 % "experiment document". It is intended for use in user-developed scripts to enable rapid and mistake-free generation of
 % Maestro experiments.
 %
-% Maestro is a Windows application developed in Steve Lisberger's laboratory to conduct a wide variety of behavioral 
+% Maestro is a Windows application developed in the Lisberger laboratory to conduct a wide variety of behavioral
 % and neurophysiological experiments focusing on certain aspects of the visual system. It provides real-time data 
 % acquisition and stimulus control to meet the particular research needs of the laboratory, and it is specifically 
 % tailored to the experimental apparatus employed there. For more information, go to 
@@ -18,9 +18,9 @@ function maestrodoc(op, arg)
 % document, but it cannot export one.
 %
 % IMPORTANT USAGE INFO:
-% 1) MAESTRODOC relies on Java code to do its work. The JAR file HHMI-MS-MAESTRO.JAR must be on Matlab's Java classpath.
-% You can call JAVACLASSPATH(P) on the Matlab command line, where P is the full pathname to a required JAR. More 
-% conveniently, include a JAVAADDPATH commands for the JAR file in your STARTUP.M file.
+% 1) MAESTRODOC relies on Java code to do its work. The JAR file HHMI-MS-MAESTRO.JAR must be on the Matlab Java
+% classpath. You can call JAVACLASSPATH(P) on the Matlab command line, where P is the full pathname to a required JAR.
+% More conveniently, include a JAVAADDPATH commands for the JAR file in your STARTUP.M file.
 % 2) MAESTRODOC checks all input arguments for any illegal or out-of-range parameter values. It will throw an exception 
 % if any such bad parameter value is found. Exceptions will also be thrown if an argument is incorrectly formatted. IT
 % IS ESSENTIAL THAT YOU READ THIS HELP GUIDE THOROUGHLY AND WRITE YOUR SCRIPTS WITH CARE!!!
@@ -29,6 +29,10 @@ function maestrodoc(op, arg)
 % time. You can only operate on one JMX document at a time.
 % 5) Some aspects of the native Maestro experiment document -- such as stimulus runs -- are not currently supported by 
 % MAESTRODOC and the JMX document format.
+% 6) As of v1.2.2, MAESTRODOC does not support the XYScope display or targets. The XYScope platform has not been
+% supported since Maestro V4.0. The old predefined targets 'FIBER*' and 'REDLED*' are also no longer supported.
+% 7) Support for specifying trial random variables was added in V1.2.2. Maestro 5.0.2 or later can process trial RV
+% definitions in the JMX document; earlier versions of Maestro will simply ignore them.
 %
 % REQUIRED INPUT ARGS: (While shown in capital letters, all argument and structure field names should be lowercase!!!!!)
 % OP - [in] Character string holding the desired operation. The supported operations are described below.
@@ -45,25 +49,16 @@ function maestrodoc(op, arg)
 %
 % MAESTRODOC('close', SAVEFILEPATH): Close the JMX document that is currently open, optionally saving it. The JMX 
 % document is saved only if SAVEFILEPATH is specified and can be created (existing file, if any, is overwritten); if 
-% SAVEFILEPATH='', the in-memory JMX document is simply discarded. It's essential to close the document when you're done
-% in order to save all the changes made since you opened it. Even if you do not save changes, you should still close the
-% document, else you'll leave a persistent object (in the function's private workspace) lying around that potentially 
-% consumes a significant amount of heap space, hurting overall Matlab performance. Operation fails, throwing a Matlab
-% exception, if file cannot be created or if an error occurs while writing the file. Regardless of success or failure,
-% the current JMX document will be closed.
+% SAVEFILEPATH='', the in-memory JMX document is simply discarded. It is essential to close the document when you are
+% done in order to save all the changes made since you opened it. Even if you do not save changes, you should still
+% close the document, else you will leave a persistent object (in the private workspace of the function) lying around
+% that potentially consumes a significant amount of heap space, hurting overall Matlab performance. Operation fails,
+% throwing a Matlab exception, if file cannot be created or if an error occurs while writing the file. Regardless of
+% success or failure, the current JMX document will be closed.
 %
 %
 % MAESTRODOC('settings', S): Change the Maestro document application settings. Here S is a Matlab structure that must
-% contain the following fields. 
-%
-%    S.XY: A numeric vector containing XYScope display properties [W H D DEL DUR FIX? S], where:
-%       -- W, H, D = width, height of visible display area in mm, and (perpendicular) distance from eye to screen center
-%          in mm. All are integers restricted to [50..5000].
-%       -- DEL = dot draw cycle delay, in #dotter-board ticks (100ns per tick for 10MHz clock, 1us for 1MHz clock).
-%          Integer restricted to [1..15]. Also, DEL + DUR <= 255.
-%       -- DUR = dot draw cycle ON duration, in #dotter-board ticks. Integer restricted to [1..254].
-%       -- FIX? = Fixed (nonzero) or auto-generated (zero) seed for XYScope random-number generator.
-%       -- S = Fixed seed value for XYScope random-number generator. Any 32-bit integer value.
+% contain the following fields.
 %
 %    S.RMV: A numeric vector containing RMVideo display properties [W H D BKG SZ DUR], where:
 %       -- W, H, D = width, height of visible display area in mm, and (perpendicular) distance from eye to screen center
@@ -94,7 +89,7 @@ function maestrodoc(op, arg)
 %
 %
 % MAESTRODOC('chancfg', CHCFG): Add a new channel configuration to the currently open JMX document, or replace an 
-% existing one. In Maestro, a trial's channel configuration tells the program which data signals should be recorded 
+% existing one. In Maestro, a trial channel configuration tells the program which data signals should be recorded
 % during that trial and which should be displayed in the Data Trace display. It also includes display offset, gain, and
 % trace color for each signal. The channel configuration itself is a distinct Maestro object containing 38 channel 
 % descriptions (16 analog, 16 digital, and six "computed" signals). It would be EXTREMELY tedious to specify a 
@@ -108,9 +103,9 @@ function maestrodoc(op, arg)
 %       spaces are allowed. If the JMX document already contains a channel configuration with this name, it is replaced
 %       accordingly. Otherwise, a new configuration is created.
 %
-%    CHCFG.CHANNELS: A Nx6 cell array holding N individual channel descriptions. If it is empty, you'll basically be 
-%       creating a default channel configuration. Each row {CH REC? DSP? OFFSET GAIN COLOR} in the cell array describes
-%       one channel, where:
+%    CHCFG.CHANNELS: A Nx6 cell array holding N individual channel descriptions. If it is empty, you will create a
+%       default channel configuration. Each row {CH REC? DSP? OFFSET GAIN COLOR} in the cell array describes one
+%       channel, where:
 %
 %       CH = Channel name, a Matlab string. Recognized values (note alternate values in parentheses): analog input 
 %           channels 'hgpos' ('ai0'), 'vepos' ('ai1'), 'hevel' ('ai2'), 'vevel' ('ai3'), 'htpos' ('ai4'), 'vtpos' 
@@ -157,8 +152,7 @@ function maestrodoc(op, arg)
 % the name for the new target set. It must satisfy the usual Maestro object naming rules. Operation fails, throwing a
 % Matlab exception, if: (1) a JMX document is not currently open; (2) NAME is not a valid Maestro object name, or a
 % target set with that name already exists; (3) NAME = 'Predefined', which is reserved in Maestro 2.x. While the
-% 'Predefined' set no longer exists in Maestro 3, it is still disallowed so that MAESTRODOC remains compatible with
-% Maestro 2.x.
+% 'Predefined' set no longer exists as of Maestro 3, it is still disallowed.
 %
 %
 % MAESTRODOC('trset', NAME): Add a new trial set to the currently open JMX document. NAME is a Matlab string containing 
@@ -181,71 +175,21 @@ function maestrodoc(op, arg)
 %
 % MAESTRODOC('target', TGT): Add a new target definition to the currently open JMX document, or replace an existing one.
 % A Maestro target describes a visual stimulus, and a trial defines how one or more such targets are animated. You can 
-% create/edit either RMVideo or XYScope targets with this operation. TGT must be a Matlab structure with five fields:
+% create/edit RMVideo targets with this operation. TGT must be a Matlab structure with five fields:
 %
 %    TGT.SET: The name of the target set in which this target should appear. Target set must already exist.
-%    TGT.NAME: The target object name. Must follow the usual Maestro object naming rules. If the specified target set
-%       already contains a target with this name, it is replaced accordingly. Otherwise, a new target is created. 
-%    TGT.ISXY: Scalar. Nonzero for an XYScope target, zero for an RMVideo target.
-%    TGT.TYPE: A string defining the target type. The type names are abbreviations of what you see in the Maestro GUI:
-% 
-%       XYScope: 'rectdot', 'center', 'surround', 'optcenter', 'rectannu', 'flowfield', 'bar', 'oc_coherent', 
-%          'oc_dotlife', 'noisydir', 'noisyspeed'.
-%       RMVideo: 'point', 'dotpatch', 'flowfield', 'bar', 'spot', 'grating', 'plaid', 'movie', 'image'.
-%
+%    TGT.NAME: The RMVideo target object name. Must follow the usual Maestro object naming rules. If the specified
+%       target set already contains a target with this name, it is replaced accordingly. Otherwise, a new target is
+%       created.
+%    TGT.TYPE: A string defining the RMVideo target type. The type names are abbreviations of what you see in the
+%       Maestro GUI: 'point', 'dotpatch', 'flowfield', 'bar', 'spot', 'grating', 'plaid', 'movie', 'image'.
 %    TGT.PARAMS: Cell array containing a sequence of one or more ('param-name', param-value) pairs. Specify only those
-%       parameters applicable to the target type. All unspecified parameters will be set to default values. Thus, for 
-%       example, for XYScope target 'center', TGT.PARAMS= {} is the same as TGT.PARAMS= {'ndots', 100, 'dim', [10 10]}.
+%       parameters applicable to the target type. All unspecified parameters will be set to default values.
 %
 % Operation fails, throwing a Matlab exception, if: (1) a JMX document is not currently open; (3) TGT is incorrectly
 % formatted; (2) TGT.SET does not identify an existing target set in the document; (3) TGT.NAME is not a valid Maestro 
 % object name; (4) TGT.TYPE is not a recognized target type; (5) TGT.PARAMS contains a bad parameter name or an invalid
 % parameter value.
-%
-% XYScope target parameter names, allowed values, and default values. Below is the list of recognized target types 
-% (TGT.TYPE) for the the XYScope video display, along with the names of the relevant parameters for that type. The 
-% default value assigned to a parameter (if it is not explicitly specified in TGT.PARAMS) is listed in parentheses after
-% the parameter name. Note that some parameters are really arrays of several related parameter values which are almost
-% always specified together. The parameter descriptions follow.
-%    'rectdot'    : 'ndots' (100), 'dim' ([w spacing] = [10 0]) 
-%    'center'     : 'ndots' (100), 'dim' ([w h] = [10 10]) 
-%    'surround'   : 'ndots' (100), 'dim' ([w h] = [10 10])
-%    'optcenter'  : 'ndots' (100), 'dim' ([w h] = [10 10])
-%    'rectannu'   : 'ndots' (100), 'dim' ([w h iw ih ix iy] = [10 10 5 5 0 0]) 
-%    'flowfield'  : 'ndots' (100), 'dim' ([or ir] = [30 0.5]) 
-%    'bar'        : 'ndots' (100), 'dim' ([w h daxis] = [10 10 0]) 
-%    'oc_coherent': 'ndots' (100), 'dim' ([w h] = [10 10]), 'pct' (100)
-%    'oc_dotlife' : 'ndots' (100), 'dim' ([w h] = [10 10]), 'dotlf' ([1 32767])
-%    'noisydir'   : 'ndots' (100), 'dim' ([w h] = [10 10]), 'dotlf' ([1 32767]), 'noise' [45 10]
-%    'noisyspeed' : 'ndots' (100), 'dim' ([w h] = [10 10]), 'dotlf' ([1 32767]), 'noise' [100 10 0]
-% 
-%    'ndots': Number of dots. Integer >= 0.
-%    'dim': Target window dimensions and orientation. This is an array of 2-6 elements, depending on the target type.
-%       Extra elements are ignored. Missing elements generate a Matlab exception!
-%       -- For most types, dim = [w h], the window width and height in deg, where w >= 0.01 and h >= 0.01.
-%       -- For 'rectdot', dim = [w spacing], where spacing >= 0.0 is the distance in deg between dots horizontally and 
-%          vertically in the rectangular dot array.
-%       -- For 'bar', dim = [w h daxis], where daxis (range [0.0 .. 359.99]) is the bar's drift axis in deg CCW from the 
-%          +x-axis. Also, w == 0 is allowed, in which case the bar becomes a line of dots.
-%       -- For 'rectannu', dim = [w h iw ih ix iy], where iw>=0.01 and ih>=0.01 are the dimensions of the rectangular
-%          hole in the annulus, in deg; and (ix,iy) are the X,Y coords of the hole's center relative to the target 
-%          center, in deg. Obviously, iw < w, ih < h. Also, (ix, iy) must be set so that the edges of the hole are 
-%          inside (or on the corresponding edge of) the target window.
-%       -- For 'flowfield', dim = [or ir], the outer and inner radii for the optical flow field, in deg. Allowed range
-%          for both is [0.5 .. 44.99], and or >= ir + 2.0.
-%    'pct': Percent coherence. Integer restricted to [0..100].
-%    'dotlf': Finite dotlife target parameters, a 2-element integer array [lifeinms maxlife]. 
-%       -- lifeinms = Integer flag selecting dot lifetime units: milliseconds (nonzero) or deg travelled (zero).
-%       -- maxlife = Maximum dot lifetime, in ms or deg. Range [2 .. 32767] ms or [0.01 .. 327.67] deg. For the noisy
-%          target types only, a max dot lifetime of 32767 ms disables the finite dotlife feature.
-%    'noise': Dot noise parameters -- [rng intv] for 'noisydir' and [rng intv mult] for 'noisyspeed', where:
-%       -- rng = noise range limit. For 'noisydir', this is an integer restricted to [0..180]; for 'noisyspeed' using 
-%          the additive noise algorithm, it is the speed noise offset range, an integer restricted to [0..300]. In 
-%          either case, a value of 0 effectively disables the noise. For 'noisyspeed' using the multiplicative noise 
-%          algorithm, rng is the noise power range, an integer restricted to [1..7].
-%       -- intv = Noise update interval in ms, an integer restricted to [2 .. 1024].
-%       -- mult = Integer flag selecting multiplicative noise algorithm (nonzero) or additive noise (zero); for the
-%          'noisyspeed' target only.
 %
 % RMVideo target parameter names, allowed values, and default values. Below is the list of recognized target types 
 % (TGT.TYPE) for the the RMVideo display, along with the names of the relevant parameters for that type. The default 
@@ -269,7 +213,7 @@ function maestrodoc(op, arg)
 %
 %    'dotsize': Dot size in pixels. Integer restricted to [1..10].
 %    'rgb': Target color packed into a 32-bit integer 0x00BBGGRR (byte 2 = blue, byte 1 = green, byte 0 = red).
-%    'rgbcon' : RGB contrast for 'dotpatch' target's two-color contrast mode. Same format as 'rgb'. If any color 
+%    'rgbcon' : RGB contrast for 'dotpatch' target two-color contrast mode. Same format as 'rgb'. If any color
 %      component is non-zero, then half the dots will be one color and half another color -- as described in the
 %      Maestro online guide.
 %    'ndots': Number of dots. Integer restricted to [0..9999].
@@ -324,7 +268,7 @@ function maestrodoc(op, arg)
 %       -- dsprate?: If set (nonzero), movie is played at the display frame rate. Otherwise, it is displayed at the
 %          frame rate specified in the movie file.
 %    'flicker': Target flicker paramers, a 3-element array of integers [on off delay] specifying the duration of the 
-%       "on" and "off" phases of the target's flicker cycle, as well as an initial delay preceding the first "on" phase.
+%       "on" and "off" phases of the target flicker cycle, as well as an initial delay preceding the first "on" phase.
 %       Units are number of RMVideo frame periods, range-restricted to [0..99]. If on=0 or off=0, target flicker is
 %       disabled.
 %    
@@ -335,7 +279,7 @@ function maestrodoc(op, arg)
 % perturbations. All such objects are identified by name, and this operation will fail if any of them do not exist in 
 % the JMX document. TRIAL must be a Matlab structure containing eight or nine fields:
 %
-% NOTE: We use Matlab's convention of 1-based indexing of arrays for specifying target and segment indices. Thus, for
+% NOTE: We use Matlab convention of 1-based indexing of arrays for specifying target and segment indices. Thus, for
 % example, valid segment indices are [1..#segs], where #segs = length(TRIAL.SEGS);
 %
 %    TRIAL.SET: The name of the trial set in which this trial should appear. The trial set must already exist.
@@ -348,7 +292,7 @@ function maestrodoc(op, arg)
 %       subset) already contains a trial with this name, it is replaced accordingly. Otherwise, a new trial is created.
 %
 %    TRIAL.PARAMS: General trial parameters. Cell array holding a sequence of zero or more ('param-name', param-value)
-%       pairs. There's no need to specify a value for every parameter listed here; most are rarely used. Only specify 
+%       pairs. There is no need to specify a value for every parameter listed here; most are rarely used. Only specify
 %       those for which the default value is not satisfactory. In fact, if ALL default values are acceptable, then just
 %       set TRIAL.PARAMS = {}.
 %       
@@ -363,7 +307,7 @@ function maestrodoc(op, arg)
 %       'failsafeseg': If trial cut short because subject broke fixation, data is still saved trial reached the start of
 %          this segment. Integer in [0..#segs], where 0 => trial must finish. Default = 0.
 %       'specialop': Special feature. Recognized values: 'none', 'skip', 'selbyfix', 'selbyfix2', 'switchfix', 
-%          'rpdistro', 'choosefix1', 'choosefix2', 'search', 'selectDur'. See Maestro User's Guide for a full description.
+%          'rpdistro', 'choosefix1', 'choosefix2', 'search', 'selectDur'. See Maestro Users Guide for a full description.
 %          Default = 'none'. 
 %       'specialseg': Index of segment during which special feature operation occurs. Ignored if 'specialop'=='none'.
 %          Integer in [1..#segs]. Default = 1.
@@ -375,11 +319,6 @@ function maestrodoc(op, arg)
 %          periodic, delivered at regular intervals; nonzero = delivered at the end of each segment for which mid-trial
 %          rewards are enabled), L = reward pulse length in milliseconds (integer, range [1..999], and D = reward pulse 
 %          interval in milliseconds, for periodic mode only (integer, range [100..9999]). Default = [0 10 1000].
-%       'xydotseedalt': Alternative seed S for XYScope random number generatorm. Integer >= -1. Overrides video display
-%          settings only if S > -1: S==0 for auto-generated seed (different for each presentation), and S>0 is a fixed
-%          seed value. Default = -1.
-%       'xyinterleave': Number of XYScope targets to be interleaved during trial. Integer, [0..N], where N is the 
-%          number of XYScope targets participating in trial. 0 or 1 ==> interleaving disabled. Default = 0.
 %       'rewpulses': Lengths of end-of-trial reward pulses, [P1 P2]. The second reward pulse only applies to the special
 %          operations that involve the subject selecting one of two fixation targets. Each pulse length is an integer
 %          range-restricted to [1..999]. Default = [10 10].
@@ -391,7 +330,7 @@ function maestrodoc(op, arg)
 %          a floating-point value restricted to [0..1000). I = the correct-response input channel (zero = AI12 and
 %          nonzero = AI13). Default = [0 1.0 0] (NOT a staircase trial).
 %
-%    TRIAL.PSGM: Control parameters for a pulse train sequence delivered by Maestro's pulse stimulus generator module
+%    TRIAL.PSGM: Control parameters for a pulse train sequence delivered by the pulse stimulus generator module
 %       (PSGM) during the trial. Value should be an empty array [] if the PSGM is not used in trial. Otherwise, it must
 %       be an 11-element vector [MODE SEG EXTRIG PA1 PA2 PW1 PW2 IPI ITI NP NT], where:
 %
@@ -417,7 +356,7 @@ function maestrodoc(op, arg)
 %       NAME = the name of the perturbation waveform. It must exist in the JMX document, or the operation fails.
 %       A = Perturbation amplitude, range-restricted to +/-999.99.
 %       S = Index of segment at which perturbation starts. Must be a valid segment index in [1..#segs].
-%       T = Index of affected target. Must be a valid index into the trial's participating target list, [1..#tgts].
+%       T = Index of affected target. Must be a valid index into the participating target list, [1..#tgts].
 %       C = Affected trajectory component. Must be one of: 'winH', 'winV', 'patH', 'patV', 'winDir', 'patDir', 'winSpd',
 %          'patSpd', 'speed', or 'direc'. 
 %
@@ -429,10 +368,11 @@ function maestrodoc(op, arg)
 %       'tgtName' is the name of an EXISTING target within that set. Note that the forward slash ('/') separating the 
 %       name tokens is not a valid character in a Maestro object name. 
 %
-%       There are five rarely used, parameter-less targets in Maestro that may be specified without the containing 
-%       target set: 'CHAIR', 'FIBER1', 'FIBER2', 'REDLED1', 'REDLED2'. 
+%       It is also possible to specify the predefined 'CHAIR' target, which has no containing target set. Note that the
+%       old 'FIBER*' and 'REDLED*' predefined targets are not supported since Maestro 4 and are no longer supported by
+%       maestrodoc().
 %
-%    TRIAL.TAGS: List of tagged sections in the trial's segment table. A "tagged section" attaches a label to a single
+%    TRIAL.TAGS: List of tagged sections in the trials segment table. A "tagged section" attaches a label to a single
 %       segment in the trial, or a contiguous span of segments. It is characterized by a label string and the indices of
 %       the first and last segments in the section. If there are no tagged sections, simply set TRIAL.TAGS = {}. 
 %       Otherwise, it should be a cell array of cell arrays of the form {LABEL, START, END}, where:
@@ -444,18 +384,51 @@ function maestrodoc(op, arg)
 %       No two tagged sections can have the same label, and the defined sections cannot overlap. If either of these
 %       rules are violated, the operation fails.
 %
-%    TRIAL.SEGS: The trial's segment table. This is a NON-EMPTY structure array with fields HDR and TRAJ, as described
+%    TRIAL.RVS : [Optional] A cell array of 0 to 10 cell arrays, where the i-th cell array defines the i-th random
+%      variable, which are labelled "x0" to "x9" in Maestro. Each cell array must have one of the following forms:
+%         {'uniform', seed, A, B} : A uniform distribution over the interval [A, B], where A < B.
+%         {'normal', seed, M, D, S} : A normal distribution with mean M, standard deviation D > 0, and a maximum spread
+%            S >= 3*D. During trial sequencing, any time a generated value falls outside [M-S, M+S], that value is
+%            rejected and another generated in its place.
+%         {'exponential', seed, L, S} : An exponential distribution with rate L > 0 and maximum spread S >= 3/L.
+%         {'gamma', seed, K, T, S} : A gamma distribution with shape parameter K > 0, scale parameter T > 0, and a
+%            maximum spread S. The mean is KT and variance KT^2. The spread S must be at least 3 standard deviations
+%            beyond the mean, ie, S >= T*(K + 3*sqrt(K)).
+%      For all of the above distributions, the nonnegative integer seed parameter initializes the random number
+%      generator each time trial sequencing begins. If 0, then a different seed is chosen for each trial sequence.
+%         {'function', formula} : An RV expressed as a function of one or more other RVs. An RV is referenced in the
+%            formula string by its variable name, "x0" to "x9" ("x0" corresponds to the 1st cell array in TRIAL.RVS,
+%            etc). In addition to these variables, the formula can contain integer or floating-point numeric constants;
+%            the named constant "pi"; the four standard arithmetic binary operators -, +, *, /; the unary - operator
+%            (as in "-2*x1"); left and right parentheses for grouping; and three named mathematical functions - sin(a),
+%            cos(a), and pow(a,b). Note that the pow() function includes a comma operator to separate its two arguments.
+%            Standard operator precedence rules are observed. It is an ERROR for a function RV to depend on itself, on
+%            another function RV, or on an RV that was not defined in TRIAL.RVs.
+%       *** NOTE: Be careful to make sure the formula string is valid, as maestrodoc() does not currently validate
+%       function RVs. That will happen when the JMX document is imported by Maestro.
+%
+%    TRIAL.RVUSE : [Optional] A cell array, possibly empty, indicating what trial segment parameters are governed
+%       by the trial random variables. Each element of the array must have the form {rvIdx, 'paramName', segIdx, tgIdx},
+%       where rvIdx is the 1-based index of a random variable defined in TRIAL.RVS, segIdx is the 1-based index of the
+%       affected segment, tgIdx is the 1-based index of the affected target trajectory parameter, and 'paramName'
+%       identifies the affected parameter:
+%           'mindur', 'maxdur' : Minimum or maximum segment duration. (tgIdx ignored in this case)
+%           'hpos', 'vpos' : Horizontal or vertical target position.
+%           'hvel', 'vvel', 'hacc', 'vacc': Horizontal or vertical target velocity or acceleration.
+%           'hpatvel', 'vpatvel': Horizontal or vertical target pattern valocity.
+%           'hpatacc', 'vpatacc': Horizontal or vertical target pattern acceleration.
+%       Note that any defined RV can control the value of more than one segment parameter.
+%
+%    TRIAL.SEGS: The trials segment table. This is a NON-EMPTY structure array with fields HDR and TRAJ, as described
 %       below. Number of structures in the array is the number of segments in the trial.
 %
-%       HDR: The segment's header, which is the list of parameters shown in the top six rows of the segment table in
+%       HDR: The segment header, which is the list of parameters shown in the top six rows of the segment table in
 %       Maestro. The header is specified, once again, as a cell array of zero or more ('param-name', param-value) pairs.
-%       There's no need to specify a value for every parameter listed here; only specify those for which the default
+%       There is no need to specify a value for every parameter listed here; only specify those for which the default
 %       value is not correct.
 %
 %          'dur': The segment duration range in milliseconds, [D1 D2], where integers 0 <= D1 <= D2. When D1 < D2, the 
 %             actual segment duration is randomized within the specified range. Default = [1000 1000].
-%          'xyframe': The XYScope display update interval for this segment, in ms. An even-valued integer in [2..256].
-%             Typical values are 2 or 4. Default = 2.
 %          'rmvsync': Enable the RMVideo VSync spot flash during the first frame marking the start of the trial segment.
 %             Nonzero = enable. Default = 0 (disabled).
 %          'fix1': Index of the first fixation target for this segment. Must be 0 ("NONE") or a valid index
@@ -488,11 +461,11 @@ function maestrodoc(op, arg)
 %         'patacc': Target pattern vector acceleration specified in the same manner as 'vel'. Default = [0 0].
 %
 %      There are a couple special cases in which the 'patvel' and 'patacc' variables must be treated differently.
-%         (1) If the target is an optic flow field (XYScope or RMVideo), there is no pattern velocity velocity -- there 
+%         (1) If the target is an optic flow field, there is no pattern velocity velocity -- there
 %      is just a "flow velocity" (positive or negative). In this case, DIR is ignored and MAG is taken as the flow 
 %      velocity (for 'patacc', DIR is ignored and MAG is taken as the flow acceleration).
 %         (2) For an RMVideo 'grating' target with the 'oriadj' flag cleared, DIR is ignored and MAG is taken as the
-%      grating's drift velocity (for 'patvel') or drift acceleration (for 'patacc').
+%      gratings drift velocity (for 'patvel') or drift acceleration (for 'patacc').
 %         (3) For an RMVideo 'plaid' target with the 'indep' flag set, the component gratings move independently, not as
 %      a cohesive pattern. In this case, DIR is taken as the drift velocity (for 'patvel') or acceleration (for 
 %      'patacc') of the first component grating, while MAG is taken as the drift velocity or acceleration of the second
@@ -507,11 +480,7 @@ function maestrodoc(op, arg)
 % duplicate tags, or overlapping/invalid sections; (9) TRIAL.SEGS contains an invalid parameter name or value; or (10)
 % the length of TRIAL.SEGS(segIdx).TRAJ does not equal the length of TRIAL.TGTS. BE CAREFUL!!!
 %
-% NOTE: Maestrodoc() supports defining XYScope targets and trials that use those targets. However, Maestro has not
-% supported the XYScope display platform since V4.0 and dropped it entirely in V5.0. Maestro 5.0 and later will simply
-% ignore any XYScope-related content in a JMX document.
-%
-% [Version 1.2.1, Nov 2024; for Maestro v5.0.1 or earlier.]
+% [Version 1.2.2, Nov 2024]
 %
 % Scott Ruffner
 % sruffner@srscicomp.com
@@ -547,7 +516,7 @@ elseif(strcmp(op, 'trial'))
    md_addtrial(arg);
 else
    error('maestrodoc:argchk', 'Unrecognized operation: %s', op);
-end;
+end
 
 
    %=== md_open: Nested function handles the operation MAESTRODOC('open', FILEPATH). ===================================
@@ -567,7 +536,7 @@ end;
       if(~isjava(jmxDoc) || isempty(jmxDoc))
          jmxDoc = [];
          error('maestrodoc:md_open', char(errBuf.toString()));
-      end;      
+      end
    end
    %=== end of nested function md_open(arg) ============================================================================
 
@@ -576,10 +545,10 @@ end;
    function md_close(arg)
       import com.srscicomp.maestro.*
       
-      % if there is no currently open document, we're done!
+      % if there is no currently open document, we are done!
       if(~isa(jmxDoc, 'com.srscicomp.maestro.JMXDoc'))
          return;
-      end;
+      end
       
       % validate the ARGument
       assert( ischar(arg), 'maestrodoc:md_close', ...
@@ -589,7 +558,7 @@ end;
       emsg = '';
       if(~isempty(arg))
          emsg = char(JMXDoc.saveDocument(jmxDoc, arg));
-      end;
+      end
       
       % reset and clear document regardless of success/failure
       jmxDoc.reset();
@@ -610,8 +579,6 @@ end;
       
       % validate the ARGument
       assert(isstruct(arg), 'maestrodoc:md_settings', 'Argument must be a Matlab structure');
-      assert(isfield(arg, 'xy') && isnumeric(arg.xy) && isvector(arg.xy) && (length(arg.xy) == 7), ...
-         'maestrodoc:md_settings', 'S.XY -- Field missing or incorrectly formatted');
       assert(isfield(arg, 'rmv') && isnumeric(arg.rmv) && isvector(arg.rmv) && (length(arg.rmv) == 6), ...
          'maestrodoc:md_settings', 'S.RMV -- Field missing or incorrectly formatted');
       assert(isfield(arg, 'fix') && isnumeric(arg.fix) && isvector(arg.fix) && (length(arg.fix) == 2), ...
@@ -620,10 +587,10 @@ end;
          'maestrodoc:md_settings', 'S.OTHER-- Field missing or incorrectly formatted');
       
       % perform the operation and check for failure
-      emsg = char(jmxDoc.changeSettings(arg.xy, arg.rmv, arg.fix, arg.other));
+      emsg = char(jmxDoc.changeSettings(arg.rmv, arg.fix, arg.other));
       if(~isempty(emsg))
          error('maestrodoc:md_settings', emsg);
-      end;
+      end
    end
    %=== end of nested function md_settings(arg) ========================================================================
 
@@ -656,18 +623,18 @@ end;
             for j=1:6
                assert(ischar(channel{j}) || (isnumeric(channel{j}) && isscalar(channel{j})), 'Bad channel descriptor');
                desc.put(channel{j});
-            end;
+            end
          catch
             error('maestrodoc:md_addchancfg', 'CHCFG.CHANNELS(%d) is incorrectly formatted', ch);
-         end;
+         end
          channelDescs.put(desc);
-      end;
+      end
       
       % perform the operation and check for failure
       emsg = char(jmxDoc.addChanCfg(arg.name, channelDescs));
       if(~isempty(emsg))
          error('maestrodoc:md_addchancfg', emsg);
-      end;
+      end
    end
    %=== end of nested function md_addchancfg(arg) ======================================================================
 
@@ -690,13 +657,13 @@ end;
       for i=4:length(arg)
          assert(isnumeric(arg{i}) && isscalar(arg{i}), 'maestrodoc:md_addpert', 'PERT is incorrectly formatted');
          params(i-3) = arg{i};
-      end;
+      end
  
       % perform the operation and check for failure
       emsg = char(jmxDoc.addPert(arg{1}, arg{2}, int32(arg{3}), params));
       if(~isempty(emsg))
          error('maestrodoc:md_addpert', emsg);
-      end;
+      end
    end
    %=== end of nested function md_addpert(arg) =========================================================================
 
@@ -716,7 +683,7 @@ end;
       emsg = char(jmxDoc.addTargetSet(arg));
       if(~isempty(emsg))
          error('maestrodoc:md_addtargetset', emsg);
-      end;
+      end
    end
    %=== end of nested function md_addtargetset(arg) ====================================================================
 
@@ -736,7 +703,7 @@ end;
       emsg = char(jmxDoc.addTrialSet(arg));
       if(~isempty(emsg))
          error('maestrodoc:md_addtrialset', emsg);
-      end;
+      end
    end
    %=== end of nested function md_addtrialset(arg) =====================================================================
 
@@ -760,7 +727,7 @@ end;
       emsg = char(jmxDoc.addTrialSubset(arg.set, arg.name));
       if(~isempty(emsg))
          error('maestrodoc:md_addtrialsubset', emsg);
-      end;
+      end
    end
    %=== end of nested function md_addtrialsubset(arg) ==================================================================
 
@@ -780,8 +747,6 @@ end;
          'maestrodoc:md_addtarget', 'TGT.SET -- Field missing or invalid; should be a non-empty string');
       assert(isfield(arg, 'name') && ischar(arg.name) && isvector(arg.name) && (~isempty(arg.name)), ...
          'maestrodoc:md_addtarget', 'TGT.NAME -- Field missing or invalid; should be a non-empty string');
-      assert(isfield(arg, 'isxy') && isnumeric(arg.isxy) && isscalar(arg.isxy), ...
-         'maestrodoc:md_addtarget', 'TGT.ISXY -- Field missing or is not a numeric scalar');
       assert(isfield(arg, 'type') && ischar(arg.type) && isvector(arg.type) && (~isempty(arg.type)), ...
          'maestrodoc:md_addtarget', 'TGT.TYPE -- Field missing or invalid; should be a non-empty string');
       assert(isfield(arg, 'params') && iscell(arg.params) && (isvector(arg.params) || isempty(arg.params)), ...
@@ -804,16 +769,16 @@ end;
             tgtParams.put(pval);
          else
             pvalAr = org.json.JSONArray;
-            for j=1:length(pval), pvalAr.put(pval(j)); end;
+            for j=1:length(pval), pvalAr.put(pval(j)); end
             tgtParams.put(pvalAr);
-         end;
-      end;
+         end
+      end
       
       % perform the operation and check for failure
-      emsg = char(jmxDoc.addTarget(arg.set, arg.name, (arg.isxy ~= 0), arg.type, tgtParams));
+      emsg = char(jmxDoc.addTarget(arg.set, arg.name, arg.type, tgtParams));
       if(~isempty(emsg))
          error('maestrodoc:md_addtarget', emsg);
-      end;
+      end
    end
    %=== end of nested function md_addtarget(arg) =======================================================================
 
@@ -843,7 +808,7 @@ end;
          assert(ischar(arg.subset) && isvector(arg.subset) && (~isempty(arg.subset)), ...
             'maestrodoc:md_addtrial', 'TRIAL.SUBSET -- Field is invalid; should be a non-empty string');
          isSubset = true;
-      end;
+      end
       
       trObj = org.json.JSONObject;
       trObj.put('name', arg.name);
@@ -866,10 +831,10 @@ end;
             trParams.put(pval);
          else
             pvalAr = org.json.JSONArray;
-            for j=1:length(pval), pvalAr.put(pval(j)); end;
+            for j=1:length(pval), pvalAr.put(pval(j)); end
             trParams.put(pvalAr);
-         end;
-      end;
+         end
+      end
       trObj.put('params', trParams);
       
       % TRIAL.PSGM -- numeric vector containing 0 or 11 elements [MODE SEG EXTRIG PA1 PA2 PW1 PW2 IPI ITI NP NT]
@@ -880,7 +845,7 @@ end;
       psgmParams = org.json.JSONArray;
       for i=1:length(arg.psgm)
          psgmParams.put(arg.psgm(i));
-      end;
+      end
       trObj.put('psgm', psgmParams);
       
       % TRIAL.PERTS -- Cell vector of up to 4 cell vectors of the form {string, scalar, scalar, scalar, string}
@@ -897,13 +862,13 @@ end;
          for j=2:4
             assert(isnumeric(pert{j}) && isscalar(pert{j}), ...
                'maestrodoc:md_addtrial', 'TRIAL.PERTS(%d) is incorrectly formatted', i);
-         end;
+         end
          
          pertAr = org.json.JSONArray;
-         for j=1:5, pertAr.put(pert{j}); end;
+         for j=1:5, pertAr.put(pert{j}); end
          
          pertsUsed.put(pertAr);
-      end;
+      end
       trObj.put('perts', pertsUsed);
       
       % TRIAL.TGTS -- non-empty cell array of strings
@@ -912,7 +877,7 @@ end;
       tgtsUsed = org.json.JSONArray;
       for i=1:length(arg.tgts)
         tgtsUsed.put(arg.tgts{i});
-      end;
+      end
       trObj.put('tgts', tgtsUsed);
       
       % TRIAL.TAGS -- possibly empty vector of cell vectors of the form {string, scalar, scalar}
@@ -926,12 +891,46 @@ end;
          assert(ischar(tag{1}) && isnumeric(tag{2}) && isscalar(tag{2}) && isnumeric(tag{3}) && isscalar(tag{3}), ...
             'maestrodoc:md_addtrial', 'TRIAL.TAGS(%d) is incorrectly formatted', i);
          tagAr = org.json.JSONArray;
-         for j=1:3, tagAr.put(tag{j}); end;
+         for j=1:3, tagAr.put(tag{j}); end
          
          tagSects.put(tagAr);
-      end;
+      end
       trObj.put('tags', tagSects);
-      
+
+      % TRIAL.RVS -- optional cell array of cell arrays defining the trial random variables
+      randVars = org.json.JSONArray;
+      if(isfield(arg, 'rvs'))
+         assert(isempty(arg.rvs) || (isvector(arg.rvs) && iscell(arg.rvs) && length(arg.rvs) <= 10), ...
+            'maestrodoc:md_addtrial', 'TRIAL.RVS -- Field incorrectly formatted');
+         for i=1:length(arg.rvs)
+            rv = arg.rvs{i};
+            assert(iscell(rv) && isvector(rv) && (length(rv) >= 2) && (length(rv) <= 5), ...
+               'maestrodoc:md_addtrial', 'TRIAL.RVS(%d) is invalid', i);
+            rvAr = org.json.JSONArray;
+            for j=1:length(rv), rvAr.put(rv{j}); end
+
+            randVars.put(rvAr);
+         end
+      end
+      trObj.put('rvs', randVars);
+
+      % TRIAL.RVUSE -- optional cell array of cell arrays assigning trial RVs to segment table parameters
+      rvUse = org.json.JSONArray;
+      if(isfield(arg, 'rvuse'))
+         assert(isempty(arg.rvuse) || (isvector(arg.rvuse) && iscell(arg.rvuse)), ...
+            'maestrodoc:md_addtrial', 'TRIAL.RVUSE -- Field incorrectly formatted');
+         for i=1:length(arg.rvuse)
+            rv = arg.rvuse{i};
+            assert(iscell(rv) && isvector(rv) && (length(rv)== 4) && ischar(rv{2}), ...
+                       'maestrodoc:md_addtrial', 'TRIAL.RVUSE(%d) is invalid', i);
+            rvAr = org.json.JSONArray;
+            for j=1:length(rv), rvAr.put(rv{j}); end
+
+            rvUse.put(rvAr);
+         end
+      end
+      trObj.put('rvuse', rvUse);
+
       % TRIAL.SEGS -- NON-EMPTY vector of structures, one per segment; each structure has fields HDR and TRAJ. HDR is a 
       % name,value cell vector, possibly empty. TRAJ is a cell vector of possibly empty name,value cell vectors, and 
       % length(TRAJ) == length(TRIAL.TGTS)
@@ -959,10 +958,10 @@ end;
                segHdr.put(pval);
             else
                pvalAr = org.json.JSONArray;
-               for k=1:length(pval), pvalAr.put(pval(k)); end;
+               for k=1:length(pval), pvalAr.put(pval(k)); end
                segHdr.put(pvalAr);
-            end;
-         end;
+            end
+         end
          segObj.put('hdr', segHdr);
          
          assert(isfield(seg, 'traj') && iscell(seg.traj) && isvector(seg.traj) && (length(seg.traj) == length(arg.tgts)), ...
@@ -988,16 +987,16 @@ end;
                   trajAr.put(pval);
                else
                   pvalAr = org.json.JSONArray;
-                  for m=1:length(pval), pvalAr.put(pval(m)); end;
+                  for m=1:length(pval), pvalAr.put(pval(m)); end
                   trajAr.put(pvalAr);
-               end;
-            end;
+               end
+            end
             trajectories.put(trajAr);
-         end;
+         end
          segObj.put('traj', trajectories);
          
          segments.put(segObj);
-      end;
+      end
       trObj.put('segs', segments);
       
       % perform the operation and check for failure
@@ -1005,10 +1004,10 @@ end;
          emsg = char(jmxDoc.addTrialToSubset(arg.set, arg.subset, trObj));
       else
          emsg = char(jmxDoc.addTrial(arg.set, trObj));
-      end;
+      end
       if(~isempty(emsg))
          error('maestrodoc:md_addtrial', emsg);
-      end;
+      end
    end
    %=== end of nested function md_addtrial(arg) ========================================================================
 
