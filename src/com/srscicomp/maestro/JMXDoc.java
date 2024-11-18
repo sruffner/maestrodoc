@@ -107,7 +107,7 @@ import org.json.JSONUtilities;
  *    <li><i>name</i> : The trial set's name. Must be a valid <i>Maestro</i> object name, and no two trial sets can
  *    have the same name.</li>
  *    <li><i>trials</i> : A JSON array of JSON objects, each of which is the definition of a <b>trial</b> or <b>trial
- *    subset</b> that is a child of this set. Each JSON trial object has seven fields:</li>
+ *    subset</b> that is a child of this set. Each JSON trial object has 7-10 fields:</li>
  *    <ul>
  *       <li><i>name</i> : The trial name. Must be a valid <i>Maestro</i> object name, and no two trials in the parent
  *       set can have the same name.</li>
@@ -116,11 +116,6 @@ import org.json.JSONUtilities;
  *       <i>param-name, param-value</i> pairs, where <i>param-name</i> is a string and the type of <i>param-value</i> 
  *       depends on the specific parameter. Parameters which do not apply to the specified target type need not be 
  *       included in the sequence, nor those parameters which are already set to their default value.</li>
- *       
- *       <li><i>psgm</i> : Control parameters for a pulse train sequence delivered by Maestro's pulse stimulus generator
- *       module (PSGM) during the trial. A JSON array of zero or 11 elements [MODE SEG EXTRIG PA1 PA2 PW1 PW2 IPI ITI 
- *       NP NT]. See MAESTRODOC.M for a full description of each PSGM parameter and its allowed values. If the PSGM is 
- *       not used in the trial, the JSON array should be empty.</li>
  *       
  *       <li><i>perts</i> : List of perturbations participating in trial, with control parameters. This will be a JSON
  *       array of up to 4 elements, each of which is a JSON array of the form <i>[pertName A S T C]</i>, where:
@@ -153,7 +148,42 @@ import org.json.JSONUtilities;
  *       </ol>
  *       No two tagged sections can have the same label, and the defined sections cannot overlap. If either of these 
  *       rules are violated, the JMX document is considered invalid.</li>
- *       
+ *
+ *      <li><i>rvs</i>: [Optional] If present, a list of random variables used in the trial. It is a JSON array of 0 to
+ *      10 JSON arrays, where the i-th array defines the i-th random variable, which are labelled "x0" to "x9" in
+ *      Maestro. Each array will have one of the following forms:
+ *      <ol>
+ *         <li>['uniform', seed, A, B] - A uniform distribution over the interval [A, B], A < B.</li>
+ *         <li>['normal', seed, M, D, S] - A normal distribution with mean M, standard deviation S > 0, and a maximum
+ *         spread S >= 3*D.</li>
+ *         <li>['exponential', seed, L, S] - An exponential distribution with rate L > 0 and max spread S > 3/L.</li>
+ *         <li>['gamma', seed, K, T, S] - A gamma distribution with shape parameter K > 0, scale parameter T > 0, and
+ *         max spread S >= T*(K + 3*sqrt(K)).</li>
+ *         <li>['function', formula] - An RV expressed as a funciton of one or more other RVs. An RV is referenced in
+ *         the formula string by its variable name, "x0" to "x9" ("x0" corresponds to the 1st element <i>rvs</i>,
+ *         etc). In addition to these variables, the formula can contain integer or floating-point numeric constants;
+ *         the named constant "pi"; the four standard arithmetic binary operators -, +, *, /; the unary - operator (as
+ *         in "-2*x1"); left and right parentheses for grouping; and three named mathematical functions - sin(a),
+ *         cos(a), and pow(a,b). Note that the pow() function includes a comma operator to separate its two arguments.
+ *         Standard operator precedence rules are observed. It is an ERROR for a function RV to depend on itself, on
+ *         another function RV, or on an undefined RV.</li>
+ *      </ol>
+ *      </li>
+ *
+ *      <li><i>rvuse</i> : [Optional] A JSON array, possibly empty, indicating what trial segment parameters are
+ *      governed by the trial random variables. Each element of the array will be a 4-element JSON array <i>[rvIdx,
+ *      'paramName', segIdx, tgIdx]</i>, where <i>rvIdx</i> is the 1-based index of a random variable defined in
+ *      <i>rvs</i>, <i>segIdx</i> is the 1-based index of the affected segment, <i>tgIdx</i> is the 1-based index of
+ *      the affected target trajectory parameter, and <i>'paramName'</i> identifies the affected parameter:
+ *      <ul>
+ *         <li>'mindur', 'maxdur' : Minimum or maximum segment duration. (tgIdx ignored in this case).</li>
+ *         <li>'hpos', 'vpos' : Horizontal or vertical target position.</li>
+ *         <li>'hvel', 'vvel', 'hacc', 'vacc': Horizontal or vertical target velocity or acceleration.</li>
+ *         <li>'hpatvel', 'vpatvel': Horizontal or vertical target pattern valocity.</li>
+ *         <li>'hpatacc', 'vpatacc': Horizontal or vertical target pattern acceleration.</li>
+ *      </ul>
+ *      </li>
+ *
  *       <li><i>segs</i> : The trial's segment table. This is a NON-EMPTY JSON array of JSON objects, one per trial 
  *       segment. Each JSON segment object <i>seg</i> contains two fields, as described below.
  *       <ol>
@@ -189,6 +219,8 @@ import org.json.JSONUtilities;
  *
  * [08nov2024] maestrodoc() v1.2.2 dropped support for the XYScope platform, which has not been supported by Maestro
  * since V4.0 (Nov 2018). {@link #changeSettings}, {@link #addTarget}, and {@link #addTrial} updated accordingly.
+ * [18nov2024] maestrodoc() v1.2.3 dropped support for the PSGM, which was never actually built and is removed from
+ * Maestro entirely.
  *
  * @author sruffner
  */
@@ -1397,50 +1429,6 @@ public class JMXDoc
                throw new JSONException("Invalid value specified for general trial param: " + pname);
          }
          
-         // validate trial PSGM parameters in "psgm" field: [MODE SEG EXTRIG PA1 PA2 PW1 PW2 IPI ITI NP NT]
-         what = "psgm";
-         JSONArray psgm = trial.getJSONArray("psgm");
-         if(psgm.length() != 0 && psgm.length() != 11)
-            throw new JSONException("Array must be empty or contain exactly 11 elements!");
-         
-         if(psgm.length() == 11)
-         {
-            int iVal = psgm.getInt(0);
-            if((iVal < 0) || (iVal > 5)) throw new JSONException("Bad parameter MODE: " + iVal);
-            
-            iVal = psgm.getInt(1);
-            if(iVal < 1 || iVal > nSegs) throw new JSONException("Bad parameter SEG: " + iVal);
-            
-            // NOTE: EXTRIG at index 2 is not checked (zero = disabled, nonzero = enabled)
-            
-            for(int i=3; i<=4; i++)
-            {
-               iVal = psgm.getInt(i);
-               if((iVal % 80) != 0 || iVal < -10240 || iVal > 10160)
-                  throw new JSONException("Bad parameter PA" + (i-2) + ": " + iVal);
-            }
-            
-            for(int i=5; i<=6; i++)
-            {
-               iVal = psgm.getInt(i);
-               if((iVal % 10) != 0 || iVal < 50 || iVal > 2500)
-                  throw new JSONException("Bad parameter PW" + (i-4) + ": " + iVal);
-            }
- 
-            iVal = psgm.getInt(7);
-            if(iVal < 1 || iVal > 250) throw new JSONException("Bad parameter IPI: " + iVal);
-            
-            iVal = psgm.getInt(8);
-            if(iVal < 10 || iVal > 2500 || (iVal % 10) != 0) 
-               throw new JSONException("Bad parameter ITI: " + iVal);
-            
-            iVal = psgm.getInt(9);
-            if(iVal < 1 || iVal > 250) throw new JSONException("Bad parameter NP: " + iVal);
-            
-            iVal = psgm.getInt(10);
-            if(iVal < 1 || iVal > 250) throw new JSONException("Bad parameter NT: " + iVal);
-         }
-
          // validate any perturbations used during trial
          what = "perts";
          JSONArray pertsUsed = trial.getJSONArray("perts");
@@ -1951,9 +1939,10 @@ public class JMXDoc
     *    <li><i>name</i> : The trial set's name. Must be a valid <i>Maestro</i> object name, and no two trial sets can
     *    have the same name.</li>
     *    <li><i>trials</i> : A JSON array of JSON objects, each of which is the definition of a trial or a trial subset
-    *    in this set. A JSON trial object has seven fields, <i>name, params, psgm, perts, tgts, tags, segs</i>. A trial
-    *    subset object has two fields, <i>subset</i> is the subset object's name, while <i>trials</i> is a JSON array of
-    *    JSON trial objects (it may NOT contain any subsets!).</li>
+    *    in this set. A JSON trial object has six required fields, <i>name, params, perts, tgts, tags, segs</i>, and
+    *    two optional fields, <i>rvs, rvuse</i>. A trial subset object has two fields, <i>subset</i> is the subset
+    *    object's name, while <i>trials</i> is a JSON array of JSON trial objects (it may NOT contain any
+    *    subsets!).</li>
     * </ul>
     */
    private JSONArray trialSets = null;
@@ -2010,7 +1999,6 @@ public class JMXDoc
    private final static HashMap<String, String> RMVAPERTURES_ALT;
    private final static HashMap<String, Object> SPECIALOPS;
    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-   private final static HashMap<String, Object> PSGM_MODES;
    private final static HashMap<String, Object> PERT_TRAJCMPTS;
    private final static HashMap<String, Object> RVASSIGNABLE_PARAMS;
    static
@@ -2056,10 +2044,6 @@ public class JMXDoc
       names = new String[] {"none", "skip", "selbyfix", "selbyfix2", "switchfix", "rpdistro", "choosefix1", 
             "choosefix2", "search", "selectDur"};
       for(String s : names) SPECIALOPS.put(s, null);
-
-      PSGM_MODES = new HashMap<>();
-      names = new String[] {"none", "single", "dual", "biphasic", "train", "bitrain"};
-      for(String s : names) PSGM_MODES.put(s, null);
 
       PERT_TRAJCMPTS = new HashMap<>();
       names = new String[] {"winH", "winV", "patH", "patV", "winDir", "patDir", "winSpd", "patSpd", "speed", "direc"};

@@ -89,7 +89,6 @@ maestrodoc('trset', 'assessRF');
 % set trial info that is the same for all of the trials in this set
 trial.set = 'assessRF';
 trial.params = {'chancfg' 'myChannels' 'startseg' 2 'rewWHVR' [2 10 0 1]};
-trial.psgm = [];
 trial.perts = {};
 trial.tgts = {
    'RMVDotPatches/fixPt' 
@@ -199,7 +198,6 @@ maestrodoc('trset', 'miscellaneous');
 trial.name = 'altHV';
 trial.set = 'miscellaneous';
 trial.params = {'rewpulses' [25 25]};
-trial.psgm = [];
 trial.perts = {};
 trial.tags = {};
 trial.segs = struct('hdr', {}, 'traj', {});

@@ -33,6 +33,8 @@ function maestrodoc(op, arg)
 % supported since Maestro V4.0. The old predefined targets 'FIBER*' and 'REDLED*' are also no longer supported.
 % 7) Support for specifying trial random variables was added in V1.2.2. Maestro 5.0.2 or later can process trial RV
 % definitions in the JMX document; earlier versions of Maestro will simply ignore them.
+% 8) As of v1.2.3, MAESTRODOC does not support use of the pulse stimulus generator module (PSGM) in a trial. The PSGM
+% was conceptually designed but never built, and it no longer appears as an option in Maestro 5.0.2.
 %
 % REQUIRED INPUT ARGS: (While shown in capital letters, all argument and structure field names should be lowercase!!!!!)
 % OP - [in] Character string holding the desired operation. The supported operations are described below.
@@ -277,14 +279,14 @@ function maestrodoc(op, arg)
 % A Maestro trial describes the animation of one or more targets over time and is, by far, the most complex object in a 
 % JMX document. Its definition depends on other objects -- a channel configuration, one or more targets, and (possibly) 
 % perturbations. All such objects are identified by name, and this operation will fail if any of them do not exist in 
-% the JMX document. TRIAL must be a Matlab structure containing eight or nine fields:
+% the JMX document. TRIAL must be a Matlab structure containing 7 required and 3 optional fields:
 %
 % NOTE: We use Matlab convention of 1-based indexing of arrays for specifying target and segment indices. Thus, for
 % example, valid segment indices are [1..#segs], where #segs = length(TRIAL.SEGS);
 %
 %    TRIAL.SET: The name of the trial set in which this trial should appear. The trial set must already exist.
 % 
-%    TRIAL.SUBSET: [OPTIONAL] The name of the trial subset in which this trial should appear. If specified, then the
+%    TRIAL.SUBSET: [Optional] The name of the trial subset in which this trial should appear. If specified, then the
 %       identified trial subset must already exist as a child of the trial identified by TRIAL.SET, and the trial is
 %       added as a child of this subset. If not specified, then the trial will be a direct child of TRIAL.SET.
 %
@@ -330,27 +332,7 @@ function maestrodoc(op, arg)
 %          a floating-point value restricted to [0..1000). I = the correct-response input channel (zero = AI12 and
 %          nonzero = AI13). Default = [0 1.0 0] (NOT a staircase trial).
 %
-%    TRIAL.PSGM: Control parameters for a pulse train sequence delivered by the pulse stimulus generator module
-%       (PSGM) during the trial. Value should be an empty array [] if the PSGM is not used in trial. Otherwise, it must
-%       be an 11-element vector [MODE SEG EXTRIG PA1 PA2 PW1 PW2 IPI ITI NP NT], where:
-%
-%       MODE = Operational mode. An integer in [0..5], where: 0 => single pulse; 1 => dual pulse (two distinct pulses
-%          separated by the interpulse interval); 2 => biphasic pulse (same as dual pulse, but no interpulse interval);
-%          3 => pulse train (sequence of identical pulses in one or more pulse trains), 4 => biphasic pulse train; 
-%          5 => none (PSGM not used).
-%       SEG = Index of trial segment during which PSGM sequence begins. Integer in [1..#segs].
-%       EXTRIG: Scalar flag. If nonzero, PSGM sequence does not start until module detects an external trigger pulse
-%          during the designated segment. If zero, PSGM sequence starts at the beginning of that segment.
-%       PA1, PA2: Amplitudes of first and second pulse, in millivolts. Each is an integer restricted to [-10240..10160] 
-%          in 80mV increments. Note that PA2 must be specified even if it does not apply to given MODE.
-%       PW1, PW2: Widths of first and second pulse, in microseconds. Each is an integer restricted to [50..2500] in 10us
-%          increments. 
-%       IPI: Interpulse interval in ms. Integer restricted to [1..250] in 1ms increments.
-%       ITI: Intertrain interval in ms. Integer restricted to [10..2500] in 10ms increments.
-%       NP: #Pulses per train. Integer restricted to [1..250].
-%       NT: #Trains in stimulus sequence. Integer restricted to [1..250].
-%
-%    TRIAL.PERTS: List of perturbations participating in trial, with control parameters. This must be an cell vector of 
+%    TRIAL.PERTS: List of perturbations participating in trial, with control parameters. This must be an cell vector of
 %       up to four cell vectors of the form {NAME, A, S, T, C}, where:
 %
 %       NAME = the name of the perturbation waveform. It must exist in the JMX document, or the operation fails.
@@ -480,7 +462,7 @@ function maestrodoc(op, arg)
 % duplicate tags, or overlapping/invalid sections; (9) TRIAL.SEGS contains an invalid parameter name or value; or (10)
 % the length of TRIAL.SEGS(segIdx).TRAJ does not equal the length of TRIAL.TGTS. BE CAREFUL!!!
 %
-% [Version 1.2.2, Nov 2024]
+% [Version 1.2.3, Nov 2024]
 %
 % Scott Ruffner
 % sruffner@srscicomp.com
@@ -836,17 +818,6 @@ end
          end
       end
       trObj.put('params', trParams);
-      
-      % TRIAL.PSGM -- numeric vector containing 0 or 11 elements [MODE SEG EXTRIG PA1 PA2 PW1 PW2 IPI ITI NP NT]
-      assert(isfield(arg, 'psgm') && isnumeric(arg.psgm) && (isvector(arg.psgm) || isempty(arg.psgm)), ...
-         'maestrodoc:md_addtrial', 'TRIAL.PSGM -- Field missing or not a vector');
-      assert(isempty(arg.psgm) || (length(arg.psgm) == 11), ...
-         'maestrodoc:md_addtrial', 'TRIAL.PSGM -- Must be empty or a vector of 11 elements');
-      psgmParams = org.json.JSONArray;
-      for i=1:length(arg.psgm)
-         psgmParams.put(arg.psgm(i));
-      end
-      trObj.put('psgm', psgmParams);
       
       % TRIAL.PERTS -- Cell vector of up to 4 cell vectors of the form {string, scalar, scalar, scalar, string}
       assert(isfield(arg, 'perts') && iscell(arg.perts) && (isempty(arg.perts) ||isvector(arg.perts)), ...

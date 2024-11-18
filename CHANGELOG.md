@@ -4,6 +4,10 @@ This file contains a version history describing changes to maestrodoc() and its 
 first introduced in May 2010. Maestro version 2.6.0 and later are capable of importing the JSON document constructed
 with the help of maestrodoc().
 
+## v1.2.3 (Nov 2024)
+- Dropped support for the Pulse Stimulus Generator Module (PSGM) in a trial. The module was never actually built, and
+it is removed entirely from Maestro as of Maestro v5.0.2.
+
 ## v1.2.2 (Nov 2024)
 - Added support for defining and using random variables in trials.
 - Removed support for specifying XYScope display settings, XYScope targets, and XYScope-related trial features.
