@@ -309,8 +309,8 @@ function maestrodoc(op, arg)
 %       'failsafeseg': If trial cut short because subject broke fixation, data is still saved trial reached the start of
 %          this segment. Integer in [0..#segs], where 0 => trial must finish. Default = 0.
 %       'specialop': Special feature. Recognized values: 'none', 'skip', 'selbyfix', 'selbyfix2', 'switchfix', 
-%          'rpdistro', 'choosefix1', 'choosefix2', 'search', 'selectDur'. See Maestro Users Guide for a full description.
-%          Default = 'none'. 
+%          'rpdistro', 'choosefix1', 'choosefix2', 'search', 'selectDur', 'findAndWait'. See Maestro Users Guide for a
+%          full description. Default = 'none'.
 %       'specialseg': Index of segment during which special feature operation occurs. Ignored if 'specialop'=='none'.
 %          Integer in [1..#segs]. Default = 1.
 %       'saccvt': Saccade threshold velocity in deg/sec for saccade-triggered special features. Integer value 

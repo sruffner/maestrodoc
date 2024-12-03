@@ -191,7 +191,7 @@ target.name = 'redOval';
 target.params = {'dim' [0.25 0.5] 'rgb' (0x000000ff) 'aperture' 'oval'};
 maestrodoc('target', target);
 
-% the "miscellaneous" trial set contains a couple trials to test definition/usage of random variables.
+% the "miscellaneous" trial set contains the remaining trials defined below...
 maestrodoc('trset', 'miscellaneous');
 
 % trial "altHV": A made-up trial that tries out RVs to control segment duration and H/V target position.
@@ -240,10 +240,10 @@ trial.rvuse = {
 };
 maestrodoc('trial', trial);
 
-% trial "selDurByFix": Four segments, second is special segment, mindur of following segment controlled by a uniform
-% RV, and maxdur is set to 500ms longer using a function RV. In first segment, subject must fixate on whiteDot with
-% 200ms grace period. For remaining segments, that target is off and the green and red targets are on. Reward Pulse 2
-% 3x longer than reward pulse 1
+% trial "selDurByFix": A trial that uses the "selDurByFix" special feature. Four segments, second is special segment,
+% mindur of following segment controlled by a uniform RV, and maxdur is set to 500ms longer using a function RV. In
+% first segment, subject must fixate on whiteDot with 200ms grace period. For remaining segments, that target is off
+% and the green and red targets are on. Reward Pulse 2 3x longer than reward pulse 1
 trial.name = 'selDurByFix';
 trial.params = {'rewpulses' [25 75] 'specialseg' 2 'specialop' 'selectDur'};
 trial.segs = struct('hdr', {}, 'traj', {});
@@ -269,6 +269,28 @@ trial.rvuse = {
    {2, 'mindur', 3, 0}
    {3, 'maxdur', 3, 0}
 };
+maestrodoc('trial', trial);
+
+% trial "findAndWait": A trial using the "findAndWait" special op. Two segments, special segment is the last. Same
+% targets as "selDurByFix" trial. No RVs involved. In first seg, subject must fixate on "whiteDot" with 300ms grace
+% period. In 5-sec special segment, "whiteDot" is off while the other two are on, with "greenCircle" designated as
+% "Fix1" -- the correct target in a "findAndWait" trial. Grace period of 500ms indicates how long the animal must fixate
+% either target to consider that target "chosen".
+trial.name = 'findAndWait';
+trial.params = {'rewpulses' [100 10] 'specialseg' 2 'specialop' 'findAndWait'};
+trial.segs = struct('hdr', {}, 'traj', {});
+trial.rvs = {};
+trial.rvuse ={};
+
+% initial fixation segment
+seg.hdr = {'dur' [1000 1250] 'fix1' 1 'fixacc' [5 5] 'grace' 300};
+seg.traj = {{'on' 1} {} {}};
+trial.segs(1) = seg;
+% the special segment - fix spot turned off; green and red targets turned on at (10,0) and (-10, 0). Subject chooses
+% one of these by fixating on it for 'grace' millisecs. The "greenCircle" is "fix1", the correct target.
+seg.hdr = {'dur' [5000 5000] 'fix1' 2 'fixacc' [5 5] 'grace' 500};
+seg.traj = {{'on' 0} {'on' 1 'pos' [10 0]} {'on' 1 'pos' [-10 0]}};
+trial.segs(2) = seg;
 maestrodoc('trial', trial);
 
 % close the document, saving it to the file path specified =============================================================

@@ -221,6 +221,7 @@ import org.json.JSONUtilities;
  * since V4.0 (Nov 2018). {@link #changeSettings}, {@link #addTarget}, and {@link #addTrial} updated accordingly.
  * [18nov2024] maestrodoc() v1.2.3 dropped support for the PSGM, which was never actually built and is removed from
  * Maestro entirely.
+ * [03dec2024] REVISED maestrodoc() v1.2.3 to support new special feature option "findAndWait", added in Maestro 5.0.2.
  *
  * @author sruffner
  */
@@ -2042,7 +2043,7 @@ public class JMXDoc
       
       SPECIALOPS = new HashMap<>();
       names = new String[] {"none", "skip", "selbyfix", "selbyfix2", "switchfix", "rpdistro", "choosefix1", 
-            "choosefix2", "search", "selectDur"};
+            "choosefix2", "search", "selectDur", "findAndWait"};
       for(String s : names) SPECIALOPS.put(s, null);
 
       PERT_TRAJCMPTS = new HashMap<>();
