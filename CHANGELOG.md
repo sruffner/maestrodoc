@@ -8,6 +8,8 @@ with the help of maestrodoc().
 - Dropped support for the Pulse Stimulus Generator Module (PSGM) in a trial. The module was never actually built, and
 it is removed entirely from Maestro as of Maestro v5.0.2.
 - Added support for another special feature, `findAndWait`, added in Maestro v5.0.2.
+- Added a trial that uses 49 targets to `examplemdoc.m`. Maestro v5.0.2 increased the maximum number of targets 
+participating in trial from 25 to 50.
 
 ## v1.2.2 (Nov 2024)
 - Added support for defining and using random variables in trials.

@@ -280,7 +280,7 @@ trial.name = 'findAndWait';
 trial.params = {'rewpulses' [100 10] 'specialseg' 2 'specialop' 'findAndWait'};
 trial.segs = struct('hdr', {}, 'traj', {});
 trial.rvs = {};
-trial.rvuse ={};
+trial.rvuse = {};
 
 % initial fixation segment
 seg.hdr = {'dur' [1000 1250] 'fix1' 1 'fixacc' [5 5] 'grace' 300};
@@ -291,6 +291,76 @@ trial.segs(1) = seg;
 seg.hdr = {'dur' [5000 5000] 'fix1' 2 'fixacc' [5 5] 'grace' 500};
 seg.traj = {{'on' 0} {'on' 1 'pos' [10 0]} {'on' 1 'pos' [-10 0]}};
 trial.segs(2) = seg;
+maestrodoc('trial', trial);
+
+% define a set of identical dot patch targets to be used in "checkerboard" trial. (Maestro 5.0.2 increased max number
+% of trial targets from 25 to 50.) Targets are named "square_i_j", with i=[0..6] and j=[0..6].
+maestrodoc('tgset', 'CheckerBoardSet');
+target.set = 'CheckerBoardSet';
+target.type = 'dotpatch';
+target.params = {'ndots' 50 'dotsize' 2 'dim' [5 5]};
+for i=0:6
+   for j=0:6
+      target.name = sprintf('square_%d_%d', i, j);
+      maestrodoc('target', target);
+   end
+end
+
+% the "miscellaneous/checkerboard" trial: Lays out the 49 5deg-by-5deg targets in a 7x7 array with centers at (-15, -15)
+% to (+15, +15) in 5 deg increments. Three segments. Targets are on and not moving in seg 0 and seg 2. Target patterns
+% move in different directions/speeds in seg 1.
+trial.name = 'checkerboard';
+trial.set = 'miscellaneous';
+trial.params = {'rewpulses' [50 50]};
+trial.segs = struct('hdr', {}, 'traj', {});
+trial.perts = {};
+trial.tags = {};
+trial.rvs = {};
+trial.rvuse = {};
+
+trial.tgts = cell(49, 1);
+for i=0:6
+   for j=0:6
+      trial.tgts{i*7 + j + 1} = sprintf('CheckerBoardSet/square_%d_%d', i, j);
+   end
+end
+
+% seg 0: All targets on and laid out in 7x7 array.
+seg.hdr = {'dur' [1000 1000]};
+seg.traj = cell(49, 1);
+for i=0:6
+   x = -15 + i*5;
+   for j=0:6
+      y = -15 + j*5;
+      seg.traj{i*7+ j + 1} = {'on' 1 'abs' 1 'pos' [x y]};
+   end
+end
+trial.segs(1) = seg;
+
+% seg 1: Target patterns move in different directions
+% NOTE use of round() to limit number of significant digits after decimal point. The JSON parser in Maestro cannot
+% handle too many decimal digits.
+seg.hdr = {'dur' [3000 3000]};
+seg.traj = cell(49, 1);
+for i=0:6
+   x = -15 + i*5;
+   for j=0:6
+      y = -15 + j*5;
+      seg.traj{i*7+ j + 1} = {'on' 1 'patvel' [round(sqrt(x*x + y*y), 6) round(atan2d(y, x), 6)]};
+   end
+end
+trial.segs(2) = seg;
+
+% seg 2: Targets still on but pattern stationary
+seg.hdr = {'dur' [1000 1000]};
+seg.traj = cell(49, 1);
+for i=0:6
+   for j=0:6
+      seg.traj{i*7+ j + 1} = {'on' 1 'patvel' [0 0]};
+   end
+end
+trial.segs(3) = seg;
+
 maestrodoc('trial', trial);
 
 % close the document, saving it to the file path specified =============================================================
