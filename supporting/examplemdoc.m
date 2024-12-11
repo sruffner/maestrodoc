@@ -64,6 +64,12 @@ target.name = 'twoColorPatch';
 target.params = {'ndots' 500 'dotsize' 4 'dim' [10 10] 'rgbcon' hex2dec('00323232')};
 maestrodoc('target', target);
 
+% [11dec2024] Added a dotpatch target with nonzero disparity. Not used in trials defined here.
+target.type = 'dotpatch';
+target.name = 'stereodots';
+target.params = {'ndots' 200 'dotsize' 20 'dim' [12 12] 'disparity' 0.5};
+maestrodoc('target', target);
+
 % define RMVideo grating targets with 5 different spatial frequences and 5 different contrasts =========================
 maestrodoc('tgset', 'RMVGratings');
 target.set = 'RMVGratings';

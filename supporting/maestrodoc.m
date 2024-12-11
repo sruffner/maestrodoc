@@ -198,11 +198,12 @@ function maestrodoc(op, arg)
 % value assigned to a parameter (if it is not explicitly specified in TGT.PARAMS) is listed in parentheses after the
 % parameter name. Again, note that some parameters are really arrays of several related parameter values which are 
 % almost always specified together. The parameter descriptions follow.
-%    'point'      : 'dotsize' (1), 'rgb' (0x00ffffff), 'flicker' ([0 0 0])
+%    'point'      : 'dotsize' (1), 'rgb' (0x00ffffff), 'flicker' ([0 0 0]), 'disparity' (0)
 %    'dotpatch'   : 'dotsize' (1), 'rgb' (0x00ffffff), 'rgbcon' (0x00000000), 'ndots' (100), 'aperture' ('rect'), 
 %                   'dim' ([10 10 5 5]), 'sigma' ([0 0]), 'seed' (0), 'pct' (100), 'dotlf' [1 0], 'noise' [0 0 100 0], 
-%                   'wrtscreen' (0), 'flicker' ([0 0 0])
-%    'flowfield'  : 'dotsize' (1), 'rgb' (0x00ffffff), 'ndots' (100), 'dim' ([30 0.5]), 'seed' (0), 'flicker' ([0 0 0])
+%                   'wrtscreen' (0), 'flicker' ([0 0 0]), 'disparity' (0)
+%    'flowfield'  : 'dotsize' (1), 'rgb' (0x00ffffff), 'ndots' (100), 'dim' ([30 0.5]), 'seed' (0), 'flicker' ([0 0 0]),
+%                   'disparity' (0)
 %    'bar'        : 'rgb' (0x00ffffff), 'dim' ([10 10 0]), 'flicker' ([0 0 0])
 %    'spot'       : 'rgb' (0x00ffffff), 'aperture' ('rect'), 'dim' ([10 10 5 5]), 'sigma' ([0 0]), 'flicker' ([0 0 0])
 %    'grating'    : 'aperture' ('rect'), 'dim' ([10 10]), 'sigma' ([0 0]), 'square' (0), 'oriadj' (0),
@@ -213,7 +214,7 @@ function maestrodoc(op, arg)
 %    'movie'      : 'folder' ('folderName'), 'file' ('fileName'), 'flags' ([0 0 0]), 'flicker' ([0 0 0])
 %    'image'      : 'folder' ('folderName'), 'file' ('fileName'), 'flicker' ([0 0 0])
 %
-%    'dotsize': Dot size in pixels. Integer restricted to [1..10].
+%    'dotsize': Dot size in pixels. Integer restricted to [1..25].
 %    'rgb': Target color packed into a 32-bit integer 0x00BBGGRR (byte 2 = blue, byte 1 = green, byte 0 = red).
 %    'rgbcon' : RGB contrast for 'dotpatch' target two-color contrast mode. Same format as 'rgb'. If any color
 %      component is non-zero, then half the dots will be one color and half another color -- as described in the
@@ -273,6 +274,8 @@ function maestrodoc(op, arg)
 %       "on" and "off" phases of the target flicker cycle, as well as an initial delay preceding the first "on" phase.
 %       Units are number of RMVideo frame periods, range-restricted to [0..99]. If on=0 or off=0, target flicker is
 %       disabled.
+%    'disparity': Stereo dot disparity in visual degrees, for the 'point', 'dotpatch', or 'flowfield' targets. Must be
+%       non-negative.
 %    
 %
 % MAESTRODOC('trial', TRIAL): Add a new trial definition to the currently open JMX document, or replace an existing one.
@@ -462,7 +465,7 @@ function maestrodoc(op, arg)
 % duplicate tags, or overlapping/invalid sections; (9) TRIAL.SEGS contains an invalid parameter name or value; or (10)
 % the length of TRIAL.SEGS(segIdx).TRAJ does not equal the length of TRIAL.TGTS. BE CAREFUL!!!
 %
-% [Version 1.2.3, Nov 2024]
+% [Version 1.2.3, Dec 2024]
 %
 % Scott Ruffner
 % sruffner@srscicomp.com

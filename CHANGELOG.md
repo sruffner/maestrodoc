@@ -5,11 +5,15 @@ first introduced in May 2010. Maestro version 2.6.0 and later are capable of imp
 with the help of maestrodoc().
 
 ## v1.2.3 (Dec 2024)
+Updated IAW sundry changes made in Maestro v5.0.2:
 - Dropped support for the Pulse Stimulus Generator Module (PSGM) in a trial. The module was never actually built, and
-it is removed entirely from Maestro as of Maestro v5.0.2.
-- Added support for another special feature, `findAndWait`, added in Maestro v5.0.2.
+it is removed entirely from Maestro as of v5.0.2.
+- Added support for a new special feature, `findAndWait`.
 - Added a trial that uses 49 targets to `examplemdoc.m`. Maestro v5.0.2 increased the maximum number of targets 
 participating in trial from 25 to 50.
+- Added support for new RMVideo target parameter `disparity`, applicable to the `point`, `dotpatch`, and `flowfield` 
+target types. 
+- Increased allowed max for the RMVideo target parameter 'dotsize' to 25.
 
 ## v1.2.2 (Nov 2024)
 - Added support for defining and using random variables in trials.

@@ -222,6 +222,8 @@ import org.json.JSONUtilities;
  * [18nov2024] maestrodoc() v1.2.3 dropped support for the PSGM, which was never actually built and is removed from
  * Maestro entirely.
  * [03dec2024] REVISED maestrodoc() v1.2.3 to support new special feature option "findAndWait", added in Maestro 5.0.2.
+ * [11dec2024] REVISED maestrodoc() v1.2.3 to support new RMVideo target param "disparity" - stereo dot disparity for
+ * target types that draw dots. Added in Maestro 5.0.2.
  *
  * @author sruffner
  */
@@ -943,11 +945,20 @@ public class JMXDoc
          switch(pname)
          {
          case "dotsize":
+         case "disparity":
             ok = type.equals("point") || type.equals("dotpatch") || type.equals("flowfield");
             if(ok)
             {
-               int dotsz = params.getInt(i + 1);
-               ok = (dotsz >= 1) && (dotsz <= 10);
+               if(pname.equals("dotsize"))
+               {
+                  int dotsz = params.getInt(i + 1);
+                  ok = (dotsz >= 1) && (dotsz <= 25);
+               }
+               else
+               {
+                  double disparity = params.getDouble(i+1);
+                  ok = (disparity >= 0);
+               }
             }
             break;
          case "rgb":
